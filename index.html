@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>本格ポーカーAI - ルール適正化版 v2.3</title>
+    <title>本格ポーカーAI - 決着演出強化 v2.4</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .card { border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: all 0.2s ease; }
@@ -26,17 +26,25 @@
             border-style: solid; border-color: #ffffff transparent transparent;
         }
         @keyframes pop { from { opacity: 0; transform: scale(0.8) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        /* リザルト演出用 */
+        #result-overlay { animation: fadeIn 0.4s ease-out; background: rgba(0,0,0,0.8); }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(1.1); } to { opacity: 1; transform: scale(1); } }
     </style>
 </head>
 <body class="bg-gray-900 font-sans text-white p-1 antialiased overflow-hidden">
 
-    <div class="max-w-6xl mx-auto h-screen flex flex-col p-1">
+    <div class="max-w-6xl mx-auto h-screen flex flex-col p-1 relative">
         
+        <div id="result-overlay" class="hidden fixed inset-0 z-50 flex items-center justify-center flex-col pointer-events-none">
+            <h2 id="result-title" class="text-6xl font-black italic mb-2 drop-shadow-2xl">YOU WIN!</h2>
+            <p id="result-detail" class="text-2xl text-yellow-400 font-bold bg-black/50 px-6 py-2 rounded-full">フルハウス</p>
+        </div>
+
         <div class="mb-1 p-1 rounded-lg update-banner flex items-center justify-between px-4">
-            <h3 class="text-yellow-500 font-black text-[10px] tracking-widest uppercase">AI思考エンジン v2.3 (ターン制御実装)</h3>
+            <h3 class="text-yellow-500 font-black text-[10px] tracking-widest uppercase">AI思考エンジン v2.4 (決着演出追加)</h3>
             <div class="flex gap-3 text-[9px] text-gray-300 italic">
-                <span><b class="text-yellow-600">●</b> 連続レイズ制限</span>
-                <span><b class="text-yellow-600">●</b> 操作ロック機能</span>
+                <span><b class="text-yellow-600">●</b> 役判定の即時表示</span>
+                <span><b class="text-yellow-600">●</b> AIの役宣言機能</span>
             </div>
         </div>
 
@@ -53,9 +61,6 @@
                         <div class="flex items-center gap-4 mb-1">
                             <span class="text-green-300 font-bold text-sm">AI プレイヤー</span>
                             <span class="text-xs text-gray-400">チップ: <b id="ai-stack" class="text-white">1000</b></span>
-                            <div class="px-2 py-0.5 bg-black/40 rounded border border-red-900 text-[9px]">
-                                <span class="text-red-400 font-bold text-white" id="ai-caution">通常</span>
-                            </div>
                         </div>
                         <div id="ai-hand" class="flex justify-center gap-3 h-28"></div>
                     </div>
@@ -65,11 +70,9 @@
                     <div id="board" class="flex justify-center gap-3 h-28"></div>
                     <div class="mt-2 flex gap-4">
                         <div class="bg-black/60 px-8 py-1 rounded-xl border border-yellow-600 text-center min-w-[140px]">
-                            <p class="text-[9px] text-yellow-500 font-bold">ポット</p>
                             <span class="text-yellow-400 font-black text-2xl neon-text" id="pot-amount">0</span>
                         </div>
                         <div class="bg-black/60 px-8 py-1 rounded-xl border border-blue-600 text-center min-w-[140px]">
-                            <p class="text-[9px] text-blue-400 font-bold">コール額</p>
                             <span class="text-blue-300 font-black text-2xl neon-text" id="call-amount">0</span>
                         </div>
                     </div>
@@ -90,7 +93,7 @@
                         <button id="btn-raise" onclick="handleAction('raise')" class="btn-push bg-blue-600 hover:bg-blue-500 px-10 py-4 rounded-xl font-black text-xl text-white">レイズ</button>
                     </div>
                     <div id="next-round-btn" class="hidden">
-                        <button onclick="startNewGame()" class="bg-white text-green-950 px-16 py-5 rounded-full font-black text-2xl hover:bg-yellow-100 shadow-xl transition-all animate-bounce">次へ進む</button>
+                        <button onclick="startNewGame()" class="pointer-events-auto bg-white text-green-950 px-16 py-5 rounded-full font-black text-2xl hover:bg-yellow-100 shadow-xl transition-all animate-bounce">次へ進む</button>
                     </div>
                 </div>
             </div>
@@ -126,7 +129,6 @@
             state.isWaiting = !enabled;
             document.getElementById('btn-fold').disabled = !enabled;
             document.getElementById('btn-call').disabled = !enabled;
-            // レイズは一度実行されたら、次のフェーズまで無効にするルールを適用
             document.getElementById('btn-raise').disabled = !enabled || state.raiseCount > 0;
         }
 
@@ -143,6 +145,7 @@
             state.phase = 'preflop'; state.currentBet = 20; state.raiseCount = 0;
             document.getElementById('next-round-btn').classList.add('hidden');
             document.getElementById('controls').classList.remove('hidden');
+            document.getElementById('result-overlay').classList.add('hidden');
             setButtonsEnabled(true);
             hideBubble();
             updateUI();
@@ -190,22 +193,16 @@
             const diff = Math.abs(v1 - v2);
 
             if (state.phase === 'preflop') {
-                if (v1 === v2) { showBubble("ペアだ！強気で行くよ。"); return 'call'; }
-                if (diff === 1) { showBubble("連続した数字…ストレート狙い！"); return 'call'; }
-                if (diff === 2) { showBubble(`${Math.min(v1,v2)}と${Math.max(v1,v2)}か。間が埋まれば！`); return 'call'; }
-                if (state.aiHand[0].s === state.aiHand[1].s) { showBubble("同じマーク、フラッシュあるかも。"); return 'call'; }
-                if (v1 >= 12 || v2 >= 12) { showBubble("絵札があるしコールしよう。"); return 'call'; }
-                if (v1 + v2 < 12) { showBubble("これは勝てないかな…"); return 'fold'; }
+                if (v1 === v2) { showBubble("ペアだ！勝負するよ。"); return 'call'; }
+                if (diff === 1 || diff === 2) { showBubble("ストレートの予感…コール！"); return 'call'; }
+                if (v1 >= 12 || v2 >= 12) { showBubble("絵札があるしね、コール！"); return 'call'; }
+                if (v1 + v2 < 12) { showBubble("この手札じゃ無理かな…"); return 'fold'; }
                 showBubble("とりあえずコール！"); return 'call';
             }
-            if (hand.s >= 2000) { showBubble("いい役ができた！負けないよ。"); return 'call'; }
+            if (hand.s >= 2000) { showBubble("いい役ができた！"); return 'call'; }
             if (hand.s >= 1000) { showBubble("ペアがある。勝負だ！"); return 'call'; }
-            let foldProb = 0.3 + (state.raiseCount * 0.25);
-            if (Math.random() < foldProb) {
-                showBubble(state.raiseCount > 0 ? "上乗せは怖い…降りるよ。" : "ダメだ、降りるね。");
-                return 'fold';
-            }
-            showBubble("ブラフかもしれない。コール！"); return 'call';
+            if (Math.random() < 0.4) { showBubble("降りるね…"); return 'fold'; }
+            showBubble("コールするよ！"); return 'call';
         }
 
         function handleAction(action) {
@@ -216,28 +213,22 @@
             let pay = state.currentBet;
             if (action === 'raise') { pay += 50; state.currentBet += 50; state.raiseCount++; }
             state.playerStack -= pay; state.pot += pay;
-            log(`あなた: ${action === 'call' ? 'コール' : 'レイズ'} (${pay})`);
             updateUI();
             
             setTimeout(() => {
                 const dec = aiDecision();
-                if (dec === 'fold') { setTimeout(() => { log("AI: フォールド。あなたの勝ち！"); endRound('Player'); }, 800); return; }
-                
+                if (dec === 'fold') { log("AI: フォールド"); endRound('Player'); return; }
                 state.aiStack -= state.currentBet; state.pot += state.currentBet;
-                log(`AI: コール (${state.currentBet})`);
-                
                 setTimeout(() => {
                     nextPhase();
                     updateUI();
-                    setButtonsEnabled(true);
-                    hideBubble();
+                    if (state.phase !== 'showdown') setButtonsEnabled(true);
                 }, 1000);
             }, 600);
         }
 
         function nextPhase() {
-            state.raiseCount = 0; // フェーズが変われば再度レイズ可能
-            state.currentBet = 20;
+            state.raiseCount = 0; state.currentBet = 20;
             if (state.phase === 'preflop') state.phase = 'flop';
             else if (state.phase === 'flop') state.phase = 'turn';
             else if (state.phase === 'turn') state.phase = 'river';
@@ -246,9 +237,23 @@
 
         function determineWinner() {
             const p = evaluateHand(state.playerHand, state.board), a = evaluateHand(state.aiHand, state.board);
-            showBubble(p.s < a.s ? "僕の勝ちだね！" : "負けちゃったー！");
-            log(`決着: あなた(${p.n}) vs AI(${a.n})`);
-            if (p.s > a.s) endRound('Player'); else if (a.s > p.s) endRound('AI'); else endRound('Draw');
+            const overlay = document.getElementById('result-overlay');
+            const title = document.getElementById('result-title');
+            const detail = document.getElementById('result-detail');
+            
+            showBubble(`僕の役は「${a.n}」だよ！`);
+            overlay.classList.remove('hidden');
+            
+            if (p.s > a.s) {
+                title.innerText = "YOU WIN!"; title.className = "text-6xl font-black italic mb-2 text-yellow-500";
+                detail.innerText = `あなたの勝ち！: ${p.n}`; endRound('Player');
+            } else if (a.s > p.s) {
+                title.innerText = "AI WIN"; title.className = "text-6xl font-black italic mb-2 text-red-500";
+                detail.innerText = `AIの勝ち: ${a.n}`; endRound('AI');
+            } else {
+                title.innerText = "DRAW"; title.className = "text-6xl font-black italic mb-2 text-white";
+                detail.innerText = `引き分け: ${p.n}`; endRound('Draw');
+            }
         }
 
         function endRound(winner) {
@@ -267,8 +272,6 @@
             document.getElementById('ai-stack').innerText = state.aiStack;
             document.getElementById('pot-amount').innerText = state.pot;
             document.getElementById('call-amount').innerText = state.currentBet;
-            const cEl = document.getElementById('ai-caution');
-            cEl.innerText = state.raiseCount === 0 ? "通常" : "注視";
             const bDiv = document.getElementById('board');
             let vis = state.phase === 'flop' ? 3 : (state.phase === 'turn' ? 4 : (state.phase === 'river' || state.phase === 'showdown' ? 5 : 0));
             bDiv.innerHTML = "";
