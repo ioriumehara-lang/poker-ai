@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Poker AI - Compact Intelligence v2.0</title>
+    <title>本格ポーカーAI - 戦略進化版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .card { border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: all 0.2s ease; }
@@ -12,92 +12,92 @@
         #log::-webkit-scrollbar { width: 4px; }
         #log::-webkit-scrollbar-thumb { background: #397d34; border-radius: 10px; }
         .neon-text { text-shadow: 0 0 10px rgba(255, 223, 0, 0.6); }
-        .update-banner { background: rgba(184,134,11,0.1); border: 1px solid rgba(184,134,11,0.3); }
-        .btn-push { transition: all 0.1s; border-bottom: 3px solid rgba(0,0,0,0.3); }
+        .update-banner { background: rgba(184,134,11,0.15); border: 1px solid rgba(184,134,11,0.3); }
+        .btn-push { transition: all 0.1s; border-bottom: 4px solid rgba(0,0,0,0.3); }
         .btn-push:active { transform: translateY(2px); border-bottom-width: 1px; }
     </style>
 </head>
-<body class="bg-gray-900 font-sans text-white p-2 antialiased">
+<body class="bg-gray-900 font-sans text-white p-1 antialiased overflow-hidden">
 
-    <div class="max-w-6xl mx-auto h-screen flex flex-col">
+    <div class="max-w-6xl mx-auto h-screen flex flex-col p-1">
         
-        <div class="mb-2 p-2 rounded-xl update-banner flex items-center justify-between px-6">
-            <h3 class="text-yellow-500 font-black text-[10px] uppercase tracking-widest">AI v2.0 Update</h3>
-            <div class="flex gap-4 text-[10px] text-gray-400 italic">
-                <span><b class="text-yellow-600">●</b> Connector Logic</span>
-                <span><b class="text-yellow-600">●</b> Suited Potential</span>
-                <span><b class="text-yellow-600">●</b> Adaptive Caution</span>
+        <div class="mb-1 p-1 rounded-lg update-banner flex items-center justify-between px-4">
+            <h3 class="text-yellow-500 font-black text-[10px] tracking-widest">AI 知能 v2.0 アップデート済み</h3>
+            <div class="flex gap-3 text-[9px] text-gray-400 italic">
+                <span><b class="text-yellow-600">●</b> 連続数字(2-3)の評価</span>
+                <span><b class="text-yellow-600">●</b> 同じマークの保持</span>
+                <span><b class="text-yellow-600">●</b> プレイヤーへの警戒機能</span>
             </div>
         </div>
 
-        <div class="flex flex-col lg:flex-row gap-4 flex-1 overflow-hidden">
+        <div class="flex flex-col lg:flex-row gap-2 flex-1 overflow-hidden">
             
-            <div id="game-container" class="flex-[3] p-4 bg-poker rounded-[2rem] shadow-2xl border-2 border-yellow-800 flex flex-col justify-between">
+            <div id="game-container" class="flex-[3] p-4 bg-poker rounded-[2rem] shadow-2xl border-2 border-yellow-800 flex flex-col justify-between overflow-hidden">
                 
-                <div class="p-3 border border-green-500/30 rounded-2xl bg-black bg-opacity-20 flex flex-col items-center">
-                    <div class="flex items-center gap-4 mb-2">
-                        <span class="text-green-300 font-bold text-sm">AI Player</span>
-                        <span class="text-xs text-gray-400">Stack: <b id="ai-stack" class="text-white">1000</b></span>
+                <div class="p-2 border border-green-500/30 rounded-2xl bg-black bg-opacity-20 flex flex-col items-center">
+                    <div class="flex items-center gap-4 mb-1">
+                        <span class="text-green-300 font-bold text-sm">AI プレイヤー</span>
+                        <span class="text-xs text-gray-400">所持金: <b id="ai-stack" class="text-white">1000</b></span>
                         <div class="px-2 py-0.5 bg-black/40 rounded border border-red-900 text-[9px]">
-                            <span class="text-red-400 uppercase">Caution:</span> <span id="ai-caution">Normal</span>
+                            <span class="text-red-400 uppercase font-bold">警戒度:</span> <span id="ai-caution" class="font-bold">通常</span>
                         </div>
                     </div>
-                    <div id="ai-hand" class="flex justify-center gap-2 h-24"></div>
+                    <div id="ai-hand" class="flex justify-center gap-3 h-28"></div>
                 </div>
 
-                <div class="flex flex-col items-center">
-                    <div id="board" class="flex justify-center gap-2 h-24"></div>
+                <div class="flex flex-col items-center py-1">
+                    <div id="board" class="flex justify-center gap-3 h-28"></div>
                     
-                    <div class="mt-4 flex gap-6">
-                        <div class="bg-black/60 px-6 py-2 rounded-xl border border-yellow-600 text-center min-w-[120px]">
-                            <p class="text-[9px] text-yellow-500 uppercase font-bold tracking-tighter">Total Pot</p>
-                            <span class="text-yellow-400 font-black text-2xl neon-text tabular-nums" id="pot-amount">0</span>
+                    <div class="mt-2 flex gap-4">
+                        <div class="bg-black/60 px-8 py-2 rounded-xl border border-yellow-600 text-center min-w-[140px]">
+                            <p class="text-[10px] text-yellow-500 font-bold tracking-tighter">合計ポット</p>
+                            <span class="text-yellow-400 font-black text-3xl neon-text tabular-nums" id="pot-amount">0</span>
                         </div>
-                        <div class="bg-black/60 px-6 py-2 rounded-xl border border-blue-600 text-center min-w-[120px]">
-                            <p class="text-[9px] text-blue-400 uppercase font-bold tracking-tighter">To Call</p>
-                            <span class="text-blue-300 font-black text-2xl neon-text tabular-nums" id="call-amount">0</span>
+                        <div class="bg-black/60 px-8 py-2 rounded-xl border border-blue-600 text-center min-w-[140px]">
+                            <p class="text-[10px] text-blue-400 font-bold tracking-tighter">必要チップ</p>
+                            <span class="text-blue-300 font-black text-3xl neon-text tabular-nums" id="call-amount">0</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="p-4 bg-green-950/40 rounded-3xl border border-white/10 shadow-inner flex flex-col items-center">
-                    <div class="flex items-center gap-4 mb-2">
-                        <span class="text-blue-300 font-bold text-sm">Your Hand</span>
-                        <span class="text-xs text-gray-400">Stack: <b id="player-stack" class="text-white">1000</b></span>
-                        <span id="current-hand-name" class="text-yellow-500 text-[10px] font-black uppercase tracking-widest italic ml-4">---</span>
+                <div class="p-4 bg-green-950/40 rounded-[2.5rem] border border-white/10 shadow-inner flex flex-col items-center">
+                    <div class="flex items-center gap-4 mb-1">
+                        <span class="text-blue-300 font-bold text-sm">あなたの手札</span>
+                        <span class="text-xs text-gray-400">所持金: <b id="player-stack" class="text-white">1000</b></span>
+                        <span id="current-hand-name" class="text-yellow-500 text-xs font-black tracking-widest italic ml-4">---</span>
                     </div>
                     
-                    <div id="player-hand" class="flex justify-center gap-2 mb-4 h-24"></div>
+                    <div id="player-hand" class="flex justify-center gap-3 mb-4 h-28"></div>
                     
                     <div id="controls" class="flex gap-4">
-                        <button onclick="handleAction('fold')" class="btn-push bg-red-700 hover:bg-red-600 px-8 py-2 rounded-lg font-bold text-sm uppercase">Fold</button>
-                        <button onclick="handleAction('call')" class="btn-push bg-yellow-500 hover:bg-yellow-400 px-8 py-2 rounded-lg font-bold text-sm text-gray-950 uppercase">Call</button>
-                        <button onclick="handleAction('raise')" class="btn-push bg-blue-600 hover:bg-blue-500 px-8 py-2 rounded-lg font-bold text-sm uppercase">Raise</button>
+                        <button onclick="handleAction('fold')" class="btn-push bg-red-700 hover:bg-red-600 px-12 py-3 rounded-xl font-black text-lg shadow-lg">降りる (Fold)</button>
+                        <button onclick="handleAction('call')" class="btn-push bg-yellow-500 hover:bg-yellow-400 px-12 py-3 rounded-xl font-black text-lg text-gray-950 shadow-lg">乗る (Call)</button>
+                        <button onclick="handleAction('raise')" class="btn-push bg-blue-600 hover:bg-blue-500 px-12 py-3 rounded-xl font-black text-lg shadow-lg">上乗せ (Raise)</button>
                     </div>
                     <div id="next-round-btn" class="hidden">
-                        <button onclick="startNewGame()" class="bg-white text-green-950 px-10 py-3 rounded-full font-black text-lg hover:bg-yellow-100 shadow-xl uppercase">Next Round</button>
+                        <button onclick="startNewGame()" class="bg-white text-green-950 px-16 py-4 rounded-full font-black text-2xl hover:bg-yellow-100 shadow-xl uppercase animate-bounce">次のラウンドへ</button>
                     </div>
                 </div>
             </div>
 
-            <div class="w-full lg:w-64 flex flex-col gap-4">
-                <div class="p-4 bg-gray-800 rounded-2xl border border-gray-700 shadow-xl h-1/2 flex flex-col">
-                    <h3 class="text-yellow-500 font-black mb-2 text-center text-[10px] uppercase border-b border-gray-700 pb-1">Rankings</h3>
-                    <ul class="text-[9px] space-y-1.5 text-gray-400 overflow-y-auto pr-1 flex-1">
-                        <li class="flex justify-between text-white font-bold italic"><span>Royal Flush</span><span>★</span></li>
-                        <li class="flex justify-between"><span>Straight Flush</span><span></span></li>
-                        <li class="flex justify-between"><span>4 of a Kind</span><span></span></li>
-                        <li class="flex justify-between"><span>Full House</span><span></span></li>
-                        <li class="flex justify-between"><span>Flush</span><span></span></li>
-                        <li class="flex justify-between"><span>Straight</span><span></span></li>
-                        <li class="flex justify-between"><span>3 of a Kind</span><span></span></li>
-                        <li class="flex justify-between"><span>Two Pair</span><span></span></li>
-                        <li class="flex justify-between text-blue-300"><span>One Pair</span><span></span></li>
-                        <li class="flex justify-between"><span>High Card</span><span>-</span></li>
+            <div class="w-full lg:w-64 flex flex-col gap-2">
+                <div class="p-3 bg-gray-800 rounded-2xl border border-gray-700 shadow-xl h-1/3 flex flex-col">
+                    <h3 class="text-yellow-500 font-black mb-1 text-center text-[11px] border-b border-gray-700 pb-1">役の強さ順</h3>
+                    <ul class="text-[10px] space-y-1 text-gray-400 overflow-y-auto pr-1 flex-1">
+                        <li class="flex justify-between text-white font-bold italic"><span>ロイヤル</span><span>★</span></li>
+                        <li class="flex justify-between"><span>ストレートフラッシュ</span></li>
+                        <li class="flex justify-between"><span>フォーカード</span></li>
+                        <li class="flex justify-between"><span>フルハウス</span></li>
+                        <li class="flex justify-between"><span>フラッシュ</span></li>
+                        <li class="flex justify-between font-bold text-yellow-600"><span>ストレート</span></li>
+                        <li class="flex justify-between"><span>スリーカード</span></li>
+                        <li class="flex justify-between"><span>ツーペア</span></li>
+                        <li class="flex justify-between text-blue-300"><span>ワンペア</span></li>
+                        <li class="flex justify-between"><span>ハイカード</span><span>-</span></li>
                     </ul>
                 </div>
-                <div id="log" class="p-4 bg-black/70 text-[11px] rounded-2xl text-green-400 font-mono border border-green-900 shadow-inner flex-1 overflow-y-auto leading-tight">
-                    [System] Compact v2.0 Ready.
+                <div id="log" class="p-3 bg-black/70 text-[11px] rounded-2xl text-green-400 font-mono border border-green-900 shadow-inner flex-1 overflow-y-auto leading-tight">
+                    [システム] 戦略エンジン 起動中...
                 </div>
             </div>
         </div>
@@ -121,7 +121,7 @@
             document.getElementById('next-round-btn').classList.add('hidden');
             document.getElementById('controls').classList.remove('hidden');
             updateUI();
-            log("--- NEW ROUND ---");
+            log("--- 新しいゲーム開始 ---");
         }
 
         function evaluateHand(hand, boardCards) {
@@ -172,12 +172,12 @@
             let pay = state.currentBet;
             if (action === 'raise') { pay += 50; state.currentBet += 50; state.raiseCount++; }
             state.playerStack -= pay; state.pot += pay;
-            log(`You ${action} (${pay}).`);
+            log(`あなた: ${action === 'call' ? '乗る' : '上乗せ'} (${pay})`);
             updateUI();
             setTimeout(() => {
-                if (aiDecision() === 'fold') { log("AI folds."); endRound('Player'); return; }
+                if (aiDecision() === 'fold') { log("AI: 降りました。あなたの勝ちです。"); endRound('Player'); return; }
                 state.aiStack -= state.currentBet; state.pot += state.currentBet;
-                log(`AI calls.`);
+                log(`AI: 乗りました (${state.currentBet})`);
                 if (state.phase === 'preflop') state.phase = 'flop';
                 else if (state.phase === 'flop') state.phase = 'turn';
                 else if (state.phase === 'turn') state.phase = 'river';
@@ -188,7 +188,7 @@
 
         function determineWinner() {
             const p = evaluateHand(state.playerHand, state.board), a = evaluateHand(state.aiHand, state.board);
-            log(`YOU:${p.n} | AI:${a.n}`);
+            log(`決着: あなた(${p.n}) vs AI(${a.n})`);
             if (p.s > a.s) endRound('Player'); else if (a.s > p.s) endRound('AI'); else endRound('Draw');
         }
 
@@ -206,20 +206,20 @@
             document.getElementById('pot-amount').innerText = state.pot;
             document.getElementById('call-amount').innerText = state.currentBet;
             const cEl = document.getElementById('ai-caution');
-            cEl.innerText = state.raiseCount === 0 ? "Normal" : (state.raiseCount === 1 ? "Watching" : "Wary");
+            cEl.innerText = state.raiseCount === 0 ? "通常" : (state.raiseCount === 1 ? "注視中" : "警戒(高)");
             cEl.className = state.raiseCount >= 2 ? "text-red-500 font-bold animate-pulse" : "text-white";
             const bDiv = document.getElementById('board');
             let vis = state.phase === 'flop' ? 3 : (state.phase === 'turn' ? 4 : (state.phase === 'river' || state.phase === 'showdown' ? 5 : 0));
             bDiv.innerHTML = "";
-            for(let i=0; i<5; i++) bDiv.innerHTML += i < vis ? renderCard(state.board[i]) : `<div class="w-16 h-24 bg-black/40 rounded-lg border border-green-900 flex items-center justify-center text-green-900 text-xl font-black">?</div>`;
+            for(let i=0; i<5; i++) bDiv.innerHTML += i < vis ? renderCard(state.board[i]) : `<div class="w-20 h-28 bg-black/40 rounded-lg border border-green-900 flex items-center justify-center text-green-900 text-3xl font-black">?</div>`;
             document.getElementById('current-hand-name').innerText = evaluateHand(state.playerHand, state.board.slice(0, vis)).n;
             document.getElementById('player-hand').innerHTML = state.playerHand.map(c => renderCard(c)).join('');
-            document.getElementById('ai-hand').innerHTML = state.phase === 'showdown' ? state.aiHand.map(c => renderCard(c)).join('') : '<div class="w-16 h-24 bg-blue-900 rounded-lg border-2 border-blue-400 flex items-center justify-center text-blue-200 text-2xl font-black italic">?</div>'.repeat(2);
+            document.getElementById('ai-hand').innerHTML = state.phase === 'showdown' ? state.aiHand.map(c => renderCard(c)).join('') : '<div class="w-20 h-28 bg-blue-900 rounded-lg border-2 border-blue-400 flex items-center justify-center text-blue-200 text-3xl font-black italic">?</div>'.repeat(2);
         }
 
         function renderCard(c) {
             const col = (c.s === '♥' || c.s === '♦') ? 'text-red-600' : 'text-gray-900';
-            return `<div class="w-16 h-24 bg-white rounded-lg flex flex-col items-center justify-center border border-gray-300 ${col} font-black text-xl card"><div class="leading-none">${c.v}</div><div class="text-2xl mt-1">${c.s}</div></div>`;
+            return `<div class="w-20 h-28 bg-white rounded-lg flex flex-col items-center justify-center border border-gray-300 ${col} font-black text-2xl card"><div class="leading-none">${c.v}</div><div class="text-3xl mt-1">${c.s}</div></div>`;
         }
 
         function log(m) { const l = document.getElementById('log'); l.innerHTML = `<span class="opacity-30">></span> ${m}<br>` + l.innerHTML; }
