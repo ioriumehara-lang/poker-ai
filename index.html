@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Poker AI - True Logic Edition</title>
+    <title>Poker AI - Bet Info Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .card { border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: transform 0.2s; }
         .bg-poker { background: radial-gradient(circle, #2d5a27 0%, #1a3a16 100%); }
         #log::-webkit-scrollbar { width: 5px; }
         #log::-webkit-scrollbar-thumb { background: #397d34; border-radius: 10px; }
+        .neon-text { text-shadow: 0 0 10px rgba(255, 223, 0, 0.5); }
     </style>
 </head>
 <body class="bg-gray-900 font-sans text-white p-4">
@@ -25,8 +26,16 @@
 
             <div class="mb-10">
                 <div id="board" class="flex justify-center gap-3 h-28 min-h-[7rem]"></div>
-                <div class="mt-6 inline-block bg-black bg-opacity-50 px-6 py-2 rounded-full border border-yellow-600">
-                    <span class="text-yellow-400 font-bold text-xl">POT: <span id="pot-amount">0</span></span>
+                
+                <div class="mt-6 flex justify-center gap-4">
+                    <div class="bg-black bg-opacity-60 px-6 py-2 rounded-xl border border-yellow-600 min-w-[120px]">
+                        <p class="text-[10px] text-yellow-500 uppercase font-bold mb-1">Total Pot</p>
+                        <span class="text-yellow-400 font-black text-2xl neon-text"><span id="pot-amount">0</span></span>
+                    </div>
+                    <div class="bg-black bg-opacity-60 px-6 py-2 rounded-xl border border-blue-600 min-w-[120px]">
+                        <p class="text-[10px] text-blue-400 uppercase font-bold mb-1">To Call</p>
+                        <span class="text-blue-300 font-black text-2xl neon-text"><span id="call-amount">0</span></span>
+                    </div>
                 </div>
             </div>
 
@@ -46,12 +55,12 @@
             </div>
 
             <div id="log" class="mt-8 p-4 bg-black bg-opacity-60 text-sm h-32 overflow-y-auto rounded-xl text-green-400 font-mono border border-green-900 shadow-inner text-left">
-                Logic Engine Loaded. AI is now thinking.
+                Betting markers active. Table ready.
             </div>
         </div>
 
         <div class="w-full lg:w-64 p-6 bg-gray-800 rounded-3xl border-2 border-gray-700 shadow-xl self-start">
-            <h3 class="text-yellow-500 font-black mb-4 text-center border-b border-gray-600 pb-2 italic">HAND RANKINGS</h3>
+            <h3 class="text-yellow-500 font-black mb-4 text-center border-b border-gray-600 pb-2 italic text-sm">HAND RANKINGS</h3>
             <ul class="text-[11px] space-y-2 text-gray-300">
                 <li class="flex justify-between font-bold text-white italic"><span>Royal Flush</span> <span>★</span></li>
                 <li class="flex justify-between"><span>Straight Flush</span></li>
@@ -68,24 +77,31 @@
     </div>
 
     <script>
-        let state = { playerStack: 1000, aiStack: 1000, pot: 0, playerHand: [], aiHand: [], board: [], phase: 'preflop' };
-        const suits = ['♠', '♥', '♦', '♣'];
-        const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+        let state = { 
+            playerStack: 1000, aiStack: 1000, pot: 0, 
+            playerHand: [], aiHand: [], board: [], 
+            phase: 'preflop', currentBet: 20 
+        };
         const valMap = {'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14};
 
-        function createDeck() {
-            let deck = [];
-            for (let s of suits) for (let v of values) deck.push({s, v});
-            return deck.sort(() => Math.random() - 0.5);
-        }
-
         function startNewGame() {
-            let deck = createDeck();
+            let deck = [];
+            const suits = ['♠', '♥', '♦', '♣'];
+            const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+            for (let s of suits) for (let v of values) deck.push({s, v});
+            deck.sort(() => Math.random() - 0.5);
+
             state.playerHand = [deck.pop(), deck.pop()];
             state.aiHand = [deck.pop(), deck.pop()];
             state.board = [deck.pop(), deck.pop(), deck.pop(), deck.pop(), deck.pop()];
-            state.pot = 40; state.playerStack -= 20; state.aiStack -= 20;
+            
+            // 初期設定
+            state.currentBet = 20; // コールに必要な額
+            state.pot = 40;        // 最初からブラインドが入っている状態
+            state.playerStack -= 20;
+            state.aiStack -= 20;
             state.phase = 'preflop';
+            
             document.getElementById('next-round-btn').classList.add('hidden');
             document.getElementById('controls').classList.remove('hidden');
             updateUI();
@@ -123,49 +139,52 @@
             return {s: high, n: "ハイカード"};
         }
 
-        // --- ここがAIの「思考」部分 ---
         function aiDecision() {
             const visibleCount = state.phase === 'preflop' ? 0 : state.phase === 'flop' ? 3 : state.phase === 'turn' ? 4 : 5;
-            const currentBoard = state.board.slice(0, visibleCount);
-            const res = evaluateHand(state.aiHand, currentBoard);
+            const res = evaluateHand(state.aiHand, state.board.slice(0, visibleCount));
 
-            // プリフロップの判断
             if (state.phase === 'preflop') {
-                const v1 = valMap[state.aiHand[0].v];
-                const v2 = valMap[state.aiHand[1].v];
-                // 合計値が12以下でペアでもない、かつ同じマークでもないならフォールド
-                if (v1 + v2 < 12 && v1 !== v2 && state.aiHand[0].s !== state.aiHand[1].s) {
-                    return 'fold';
-                }
+                const v1 = valMap[state.aiHand[0].v], v2 = valMap[state.aiHand[1].v];
+                if (v1 + v2 < 12 && v1 !== v2 && state.aiHand[0].s !== state.aiHand[1].s) return 'fold';
                 return 'call';
             }
-
-            // それ以降の判断
-            if (res.s < 1000) { // ハイカードの時
-                // 相手がRaiseしてきたら、自分の手札が弱ければ降りる(簡易的に30%の確率で耐える)
-                return Math.random() > 0.3 ? 'fold' : 'call';
-            }
+            if (res.s < 1000 && Math.random() > 0.4) return 'fold';
             return 'call';
         }
 
         function handleAction(action) {
             if (action === 'fold') { endRound('AI'); return; }
-            log(`You ${action}.`);
             
+            // プレイヤーがチップを払う
+            let payAmount = (action === 'raise') ? state.currentBet + 50 : state.currentBet;
+            state.playerStack -= payAmount;
+            state.pot += payAmount;
+            if (action === 'raise') state.currentBet += 50;
+
+            log(`You ${action} (${payAmount} chips).`);
+            updateUI();
+
             setTimeout(() => {
                 const aiAction = aiDecision();
-                
                 if (aiAction === 'fold') {
-                    log("AI: 「これは勝てない...」 AIがフォールドしました。");
+                    log("AI: フォールドします。あなたの勝ちです。");
                     endRound('Player');
                     return;
                 }
 
-                log("AI: コールします。");
+                // AIも同額を払う
+                state.aiStack -= state.currentBet;
+                state.pot += state.currentBet;
+                log(`AI: コールします (${state.currentBet} chips)。`);
+
+                // フェーズ移行
                 if (state.phase === 'preflop') state.phase = 'flop';
                 else if (state.phase === 'flop') state.phase = 'turn';
                 else if (state.phase === 'turn') state.phase = 'river';
                 else { state.phase = 'showdown'; determineWinner(); return; }
+                
+                // 次のフェーズの基本ベット額をリセット
+                state.currentBet = 20; 
                 updateUI();
             }, 600);
         }
@@ -184,7 +203,7 @@
             if (winner === 'Player') { state.playerStack += state.pot; log("🎊 YOU WIN!"); }
             else if (winner === 'AI') { state.aiStack += state.pot; log("💀 AI WINS."); }
             else { state.playerStack += state.pot/2; state.aiStack += state.pot/2; log("🤝 DRAW."); }
-            state.pot = 0;
+            state.pot = 0; state.currentBet = 0;
             document.getElementById('controls').classList.add('hidden');
             document.getElementById('next-round-btn').classList.remove('hidden');
         }
@@ -193,10 +212,10 @@
             document.getElementById('player-stack').innerText = state.playerStack;
             document.getElementById('ai-stack').innerText = state.aiStack;
             document.getElementById('pot-amount').innerText = state.pot;
+            document.getElementById('call-amount').innerText = state.currentBet; // コール額を反映
             
             const boardDiv = document.getElementById('board');
             let visibleCount = state.phase === 'flop' ? 3 : state.phase === 'turn' ? 4 : (state.phase === 'river' || state.phase === 'showdown') ? 5 : 0;
-            
             let boardHTML = "";
             for (let i = 0; i < 5; i++) {
                 if (i < visibleCount) boardHTML += renderCard(state.board[i]);
