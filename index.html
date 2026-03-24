@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>本格ポーカーAI - 思考可視化 v2.2</title>
+    <title>本格ポーカーAI - ルール適正化版 v2.3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .card { border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: all 0.2s ease; }
-        .card:hover { transform: translateY(-5px); }
         .bg-poker { background: radial-gradient(circle at center, #2d5a27 0%, #1a3a16 100%); }
         #log::-webkit-scrollbar { width: 4px; }
         #log::-webkit-scrollbar-thumb { background: #397d34; border-radius: 10px; }
         .neon-text { text-shadow: 0 0 10px rgba(255, 223, 0, 0.6); }
         .update-banner { background: rgba(184,134,11,0.15); border: 1px solid rgba(184,134,11,0.3); }
         .btn-push { transition: all 0.1s; border-bottom: 4px solid rgba(0,0,0,0.3); }
-        .btn-push:active { transform: translateY(2px); border-bottom-width: 1px; }
+        .btn-push:active:not(:disabled) { transform: translateY(2px); border-bottom-width: 1px; }
+        .btn-push:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
         .bubble {
             position: relative; background: #ffffff; color: #1a1a1a;
             border-radius: 12px; padding: 6px 12px; font-weight: bold;
@@ -33,10 +33,10 @@
     <div class="max-w-6xl mx-auto h-screen flex flex-col p-1">
         
         <div class="mb-1 p-1 rounded-lg update-banner flex items-center justify-between px-4">
-            <h3 class="text-yellow-500 font-black text-[10px] tracking-widest uppercase">AI思考エンジン v2.2 (3-5/カタカナUI)</h3>
+            <h3 class="text-yellow-500 font-black text-[10px] tracking-widest uppercase">AI思考エンジン v2.3 (ターン制御実装)</h3>
             <div class="flex gap-3 text-[9px] text-gray-300 italic">
-                <span><b class="text-yellow-600">●</b> 3-5等のギャッパー評価強化</span>
-                <span><b class="text-yellow-600">●</b> カタカナ表記UI</span>
+                <span><b class="text-yellow-600">●</b> 連続レイズ制限</span>
+                <span><b class="text-yellow-600">●</b> 操作ロック機能</span>
             </div>
         </div>
 
@@ -85,9 +85,9 @@
                     <div id="player-hand" class="flex justify-center gap-3 mb-3 h-28"></div>
                     
                     <div id="controls" class="flex gap-4">
-                        <button onclick="handleAction('fold')" class="btn-push bg-red-700 hover:bg-red-600 px-12 py-4 rounded-xl font-black text-xl">フォールド</button>
-                        <button onclick="handleAction('call')" class="btn-push bg-yellow-500 hover:bg-yellow-400 px-12 py-4 rounded-xl font-black text-xl text-gray-950">コール</button>
-                        <button onclick="handleAction('raise')" class="btn-push bg-blue-600 hover:bg-blue-500 px-12 py-4 rounded-xl font-black text-xl text-white">レイズ</button>
+                        <button id="btn-fold" onclick="handleAction('fold')" class="btn-push bg-red-700 hover:bg-red-600 px-10 py-4 rounded-xl font-black text-xl">フォールド</button>
+                        <button id="btn-call" onclick="handleAction('call')" class="btn-push bg-yellow-500 hover:bg-yellow-400 px-10 py-4 rounded-xl font-black text-xl text-gray-950">コール</button>
+                        <button id="btn-raise" onclick="handleAction('raise')" class="btn-push bg-blue-600 hover:bg-blue-500 px-10 py-4 rounded-xl font-black text-xl text-white">レイズ</button>
                     </div>
                     <div id="next-round-btn" class="hidden">
                         <button onclick="startNewGame()" class="bg-white text-green-950 px-16 py-5 rounded-full font-black text-2xl hover:bg-yellow-100 shadow-xl transition-all animate-bounce">次へ進む</button>
@@ -112,15 +112,23 @@
                     </ul>
                 </div>
                 <div id="log" class="p-3 bg-black/70 text-[11px] rounded-2xl text-green-400 font-mono border border-green-900 flex-1 overflow-y-auto leading-tight">
-                    [System] AI Ready...
+                    [System] Game Ready.
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        let state = { playerStack: 1000, aiStack: 1000, pot: 0, playerHand: [], aiHand: [], board: [], phase: 'preflop', currentBet: 20, raiseCount: 0 };
+        let state = { playerStack: 1000, aiStack: 1000, pot: 0, playerHand: [], aiHand: [], board: [], phase: 'preflop', currentBet: 20, raiseCount: 0, isWaiting: false };
         const valMap = {'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14};
+
+        function setButtonsEnabled(enabled) {
+            state.isWaiting = !enabled;
+            document.getElementById('btn-fold').disabled = !enabled;
+            document.getElementById('btn-call').disabled = !enabled;
+            // レイズは一度実行されたら、次のフェーズまで無効にするルールを適用
+            document.getElementById('btn-raise').disabled = !enabled || state.raiseCount > 0;
+        }
 
         function startNewGame() {
             let deck = [];
@@ -135,6 +143,7 @@
             state.phase = 'preflop'; state.currentBet = 20; state.raiseCount = 0;
             document.getElementById('next-round-btn').classList.add('hidden');
             document.getElementById('controls').classList.remove('hidden');
+            setButtonsEnabled(true);
             hideBubble();
             updateUI();
             log("--- 新ゲーム開始 ---");
@@ -183,26 +192,26 @@
             if (state.phase === 'preflop') {
                 if (v1 === v2) { showBubble("ペアだ！強気で行くよ。"); return 'call'; }
                 if (diff === 1) { showBubble("連続した数字…ストレート狙い！"); return 'call'; }
-                if (diff === 2) { showBubble(`${Math.min(v1,v2)}と${Math.max(v1,v2)}か。間が埋まれば強い！`); return 'call'; }
-                if (state.aiHand[0].s === state.aiHand[1].s) { showBubble("同じマークだね、フラッシュあるかも。"); return 'call'; }
+                if (diff === 2) { showBubble(`${Math.min(v1,v2)}と${Math.max(v1,v2)}か。間が埋まれば！`); return 'call'; }
+                if (state.aiHand[0].s === state.aiHand[1].s) { showBubble("同じマーク、フラッシュあるかも。"); return 'call'; }
                 if (v1 >= 12 || v2 >= 12) { showBubble("絵札があるしコールしよう。"); return 'call'; }
                 if (v1 + v2 < 12) { showBubble("これは勝てないかな…"); return 'fold'; }
                 showBubble("とりあえずコール！"); return 'call';
             }
-
             if (hand.s >= 2000) { showBubble("いい役ができた！負けないよ。"); return 'call'; }
             if (hand.s >= 1000) { showBubble("ペアがある。勝負だ！"); return 'call'; }
-            
             let foldProb = 0.3 + (state.raiseCount * 0.25);
             if (Math.random() < foldProb) {
-                showBubble(state.raiseCount > 1 ? "そのレイズは怖い…降りるよ。" : "ダメだ、降りるね。");
+                showBubble(state.raiseCount > 0 ? "上乗せは怖い…降りるよ。" : "ダメだ、降りるね。");
                 return 'fold';
             }
-            showBubble("ブラフかもしれない。コール！");
-            return 'call';
+            showBubble("ブラフかもしれない。コール！"); return 'call';
         }
 
         function handleAction(action) {
+            if (state.isWaiting) return;
+            setButtonsEnabled(false);
+
             if (action === 'fold') { endRound('AI'); return; }
             let pay = state.currentBet;
             if (action === 'raise') { pay += 50; state.currentBet += 50; state.raiseCount++; }
@@ -213,15 +222,26 @@
             setTimeout(() => {
                 const dec = aiDecision();
                 if (dec === 'fold') { setTimeout(() => { log("AI: フォールド。あなたの勝ち！"); endRound('Player'); }, 800); return; }
+                
                 state.aiStack -= state.currentBet; state.pot += state.currentBet;
                 log(`AI: コール (${state.currentBet})`);
-                if (state.phase === 'preflop') state.phase = 'flop';
-                else if (state.phase === 'flop') state.phase = 'turn';
-                else if (state.phase === 'turn') state.phase = 'river';
-                else { state.phase = 'showdown'; determineWinner(); return; }
-                state.currentBet = 20; updateUI();
-                setTimeout(hideBubble, 1500);
+                
+                setTimeout(() => {
+                    nextPhase();
+                    updateUI();
+                    setButtonsEnabled(true);
+                    hideBubble();
+                }, 1000);
             }, 600);
+        }
+
+        function nextPhase() {
+            state.raiseCount = 0; // フェーズが変われば再度レイズ可能
+            state.currentBet = 20;
+            if (state.phase === 'preflop') state.phase = 'flop';
+            else if (state.phase === 'flop') state.phase = 'turn';
+            else if (state.phase === 'turn') state.phase = 'river';
+            else { state.phase = 'showdown'; determineWinner(); }
         }
 
         function determineWinner() {
@@ -232,11 +252,14 @@
         }
 
         function endRound(winner) {
-            state.phase = 'showdown'; updateUI();
+            state.phase = 'showdown';
+            updateUI();
             if (winner === 'Player') state.playerStack += state.pot;
             else if (winner === 'AI') state.aiStack += state.pot;
             else { state.playerStack += state.pot/2; state.aiStack += state.pot/2; }
-            state.pot = 0; document.getElementById('controls').classList.add('hidden'); document.getElementById('next-round-btn').classList.remove('hidden');
+            state.pot = 0;
+            document.getElementById('controls').classList.add('hidden');
+            document.getElementById('next-round-btn').classList.remove('hidden');
         }
 
         function updateUI() {
@@ -245,12 +268,11 @@
             document.getElementById('pot-amount').innerText = state.pot;
             document.getElementById('call-amount').innerText = state.currentBet;
             const cEl = document.getElementById('ai-caution');
-            cEl.innerText = state.raiseCount === 0 ? "通常" : (state.raiseCount === 1 ? "注視" : "警戒中");
-            cEl.parentElement.className = state.raiseCount >= 2 ? "px-2 py-0.5 bg-red-900/40 rounded border border-red-500 animate-pulse" : "px-2 py-0.5 bg-black/40 rounded border border-red-900";
+            cEl.innerText = state.raiseCount === 0 ? "通常" : "注視";
             const bDiv = document.getElementById('board');
             let vis = state.phase === 'flop' ? 3 : (state.phase === 'turn' ? 4 : (state.phase === 'river' || state.phase === 'showdown' ? 5 : 0));
             bDiv.innerHTML = "";
-            for(let i=0; i<5; i++) bDiv.innerHTML += i < vis ? renderCard(state.board[i]) : `<div class="w-20 h-28 bg-black/40 rounded-lg border border-green-900 flex items-center justify-center text-green-900 text-3xl font-black shadow-inner">?</div>`;
+            for(let i=0; i<5; i++) bDiv.innerHTML += i < vis ? renderCard(state.board[i]) : `<div class="w-20 h-28 bg-black/40 rounded-lg border border-green-900 flex items-center justify-center text-green-900 text-3xl font-black">?</div>`;
             document.getElementById('current-hand-name').innerText = evaluateHand(state.playerHand, state.board.slice(0, vis)).n;
             document.getElementById('player-hand').innerHTML = state.playerHand.map(c => renderCard(c)).join('');
             document.getElementById('ai-hand').innerHTML = state.phase === 'showdown' ? state.aiHand.map(c => renderCard(c)).join('') : '<div class="w-20 h-28 bg-blue-900 rounded-lg border-2 border-blue-400 flex items-center justify-center text-blue-200 text-3xl font-black italic shadow-lg">?</div>'.repeat(2);
