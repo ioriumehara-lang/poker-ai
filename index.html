@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Poker AI Battle</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .card { border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .bg-poker { background-color: #2d5a27; }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+    <div id="game-container" class="max-w-2xl mx-auto my-10 p-6 bg-poker rounded-xl shadow-2xl text-white">
+        <h1 class="text-3xl font-bold text-center mb-6">Texas Hold'em vs AI</h1>
+        
+        <div class="mb-10 p-4 border-2 border-dashed border-green-400 rounded-lg text-center">
+            <h2 class="text-xl font-bold mb-2">AI Player (Stack: <span id="ai-stack">1000</span>)</h2>
+            <div id="ai-hand" class="flex justify-center gap-2 h-24">
+                <div class="w-16 h-24 bg-blue-800 rounded-lg border-2 border-white"></div>
+                <div class="w-16 h-24 bg-blue-800 rounded-lg border-2 border-white"></div>
+            </div>
+        </div>
+
+        <div class="mb-10 text-center">
+            <p class="text-sm uppercase tracking-widest text-green-200 mb-2">Community Cards</p>
+            <div id="board" class="flex justify-center gap-2 h-24 min-h-[6rem]">
+                </div>
+            <p class="mt-4 text-2xl font-bold">Pot: <span id="pot-amount">0</span></p>
+        </div>
+
+        <div class="p-4 bg-green-800 rounded-lg text-center shadow-inner">
+            <h2 class="text-xl font-bold mb-2">You (Stack: <span id="player-stack">1000</span>)</h2>
+            <div id="player-hand" class="flex justify-center gap-2 mb-6 h-24">
+                </div>
+            
+            <div id="controls" class="flex justify-center gap-4">
+                <button onclick="handleAction('fold')" class="bg-red-600 hover:bg-red-700 px-6 py-2 rounded font-bold transition">Fold</button>
+                <button onclick="handleAction('call')" class="bg-yellow-500 hover:bg-yellow-600 px-6 py-2 rounded font-bold transition text-gray-900">Call</button>
+                <button onclick="handleAction('raise')" class="bg-blue-500 hover:bg-blue-600 px-6 py-2 rounded font-bold transition">Raise</button>
+            </div>
+            <div id="next-round-btn" class="hidden mt-4">
+                <button onclick="startNewGame()" class="bg-white text-green-900 px-8 py-2 rounded-full font-bold">Next Round</button>
+            </div>
+        </div>
+
+        <div id="log" class="mt-6 p-3 bg-black bg-opacity-30 text-xs h-24 overflow-y-auto rounded text-green-100">
+            ゲームを開始してください。
+        </div>
+    </div>
+
+    <script>
+        // ゲーム状態の管理
+        let state = {
+            playerStack: 1000,
+            aiStack: 1000,
+            pot: 0,
+            playerHand: [],
+            aiHand: [],
+            board: [],
+            phase: 'preflop' // preflop, flop, turn, river, showdown
+        };
+
+        const suits = ['♠', '♥', '♦', '♣'];
+        const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+
+        function createDeck() {
+            let deck = [];
+            for (let s of suits) for (let v of values) deck.push({s, v});
+            return deck.sort(() => Math.random() - 0.5);
+        }
+
+        function startNewGame() {
+            let deck = createDeck();
+            state.playerHand = [deck.pop(), deck.pop()];
+            state.aiHand = [deck.pop(), deck.pop()];
+            state.board = [deck.pop(), deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+            state.pot = 40; // 初期ブラインド
+            state.playerStack -= 20;
+            state.aiStack -= 20;
+            state.phase = 'preflop';
+
+            document.getElementById('next-round-btn').classList.add('hidden');
+            document.getElementById('controls').classList.remove('hidden');
+            updateUI();
+            log("新しいラウンドが始まりました。");
+        }
+
+        function updateUI() {
+            document.getElementById('player-stack').innerText = state.playerStack;
+            document.getElementById('ai-stack').innerText = state.aiStack;
+            document.getElementById('pot-amount').innerText = state.pot;
+            
+            // プレイヤーの手札表示
+            const playerHandDiv = document.getElementById('player-hand');
+            playerHandDiv.innerHTML = state.playerHand.map(c => renderCard(c)).join('');
+
+            // ボードの表示 (フェーズに応じて制限)
+            const boardDiv = document.getElementById('board');
+            let visibleCards = [];
+            if (state.phase === 'flop') visibleCards = state.board.slice(0,3);
+            if (state.phase === 'turn') visibleCards = state.board.slice(0,4);
+            if (state.phase === 'river' || state.phase === 'showdown') visibleCards = state.board;
+            boardDiv.innerHTML = visibleCards.map(c => renderCard(c)).join('');
+
+            if (state.phase === 'showdown') {
+                document.getElementById('ai-hand').innerHTML = state.aiHand.map(c => renderCard(c)).join('');
+            } else {
+                document.getElementById('ai-hand').innerHTML = `<div class="w-16 h-24 bg-blue-800 rounded-lg border-2 border-white"></div>`.repeat(2);
+            }
+        }
+
+        function renderCard(card) {
+            const color = (card.s === '♥' || card.s === '♦') ? 'text-red-600' : 'text-black';
+            return `<div class="w-16 h-24 bg-white rounded-lg flex flex-col items-center justify-center border-2 border-gray-300 ${color} font-bold text-xl card">
+                        <div>${card.v}</div><div>${card.s}</div>
+                    </div>`;
+        }
+
+        function handleAction(action) {
+            log(`あなたは ${action} を選択しました。`);
+            
+            if (action === 'fold') {
+                endRound('AI');
+                return;
+            }
+
+            // AIのターン（簡易ロジック）
+            setTimeout(() => {
+                aiLogic();
+            }, 600);
+        }
+
+        function aiLogic() {
+            // AIの思考: A, K, Qがあるか、ペアがあれば強気
+            const hasHighCard = state.aiHand.some(c => ['A', 'K', 'Q'].includes(c.v));
+            const isPair = state.aiHand[0].v === state.aiHand[1].v;
+
+            if (state.phase === 'preflop') {
+                state.phase = 'flop';
+                log("AIはコールしました。フロップが開きます。");
+            } else if (state.phase === 'flop') {
+                state.phase = 'turn';
+                log("AIはチェックしました。ターンが開きます。");
+            } else if (state.phase === 'turn') {
+                state.phase = 'river';
+                log("AIはチェックしました。リバーが開きます。");
+            } else {
+                state.phase = 'showdown';
+                determineWinner();
+            }
+            updateUI();
+        }
+
+        function determineWinner() {
+            // 本来はここで役判定が必要。今回はランダム勝敗の簡易版
+            const win = Math.random() > 0.5;
+            endRound(win ? 'Player' : 'AI');
+        }
+
+        function endRound(winner) {
+            log(`勝者: ${winner}!`);
+            if (winner === 'Player') state.playerStack += state.pot;
+            else state.aiStack += state.pot;
+            
+            state.pot = 0;
+            state.phase = 'showdown';
+            updateUI();
+            document.getElementById('controls').classList.add('hidden');
+            document.getElementById('next-round-btn').classList.remove('hidden');
+        }
+
+        function log(msg) {
+            const l = document.getElementById('log');
+            l.innerHTML = `> ${msg}<br>` + l.innerHTML;
+        }
+
+        // 初回起動
+        startNewGame();
+    </script>
+</body>
+</html>
