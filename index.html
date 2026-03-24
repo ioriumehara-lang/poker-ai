@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Poker AI - Bet Info Edition</title>
+    <title>Poker AI - Adaptive Logic Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .card { border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: transform 0.2s; }
@@ -21,19 +21,19 @@
             
             <div class="mb-10 p-4 border-2 border-dashed border-green-500 rounded-2xl bg-black bg-opacity-20">
                 <h2 class="text-lg font-bold mb-3 text-green-300">AI Player (Stack: <span id="ai-stack">1000</span>)</h2>
+                <div class="text-[10px] text-red-400 mb-2">AI Caution Level: <span id="ai-caution">Normal</span></div>
                 <div id="ai-hand" class="flex justify-center gap-3 h-28"></div>
             </div>
 
             <div class="mb-10">
                 <div id="board" class="flex justify-center gap-3 h-28 min-h-[7rem]"></div>
-                
                 <div class="mt-6 flex justify-center gap-4">
                     <div class="bg-black bg-opacity-60 px-6 py-2 rounded-xl border border-yellow-600 min-w-[120px]">
-                        <p class="text-[10px] text-yellow-500 uppercase font-bold mb-1">Total Pot</p>
+                        <p class="text-[10px] text-yellow-500 uppercase font-bold mb-1 text-center">Total Pot</p>
                         <span class="text-yellow-400 font-black text-2xl neon-text"><span id="pot-amount">0</span></span>
                     </div>
                     <div class="bg-black bg-opacity-60 px-6 py-2 rounded-xl border border-blue-600 min-w-[120px]">
-                        <p class="text-[10px] text-blue-400 uppercase font-bold mb-1">To Call</p>
+                        <p class="text-[10px] text-blue-400 uppercase font-bold mb-1 text-center">To Call</p>
                         <span class="text-blue-300 font-black text-2xl neon-text"><span id="call-amount">0</span></span>
                     </div>
                 </div>
@@ -55,12 +55,12 @@
             </div>
 
             <div id="log" class="mt-8 p-4 bg-black bg-opacity-60 text-sm h-32 overflow-y-auto rounded-xl text-green-400 font-mono border border-green-900 shadow-inner text-left">
-                Betting markers active. Table ready.
+                Adaptive AI active. He is watching your moves...
             </div>
         </div>
 
         <div class="w-full lg:w-64 p-6 bg-gray-800 rounded-3xl border-2 border-gray-700 shadow-xl self-start">
-            <h3 class="text-yellow-500 font-black mb-4 text-center border-b border-gray-600 pb-2 italic text-sm">HAND RANKINGS</h3>
+            <h3 class="text-yellow-500 font-black mb-4 text-center border-b border-gray-600 pb-2 italic text-sm uppercase">Hand Rankings</h3>
             <ul class="text-[11px] space-y-2 text-gray-300">
                 <li class="flex justify-between font-bold text-white italic"><span>Royal Flush</span> <span>★</span></li>
                 <li class="flex justify-between"><span>Straight Flush</span></li>
@@ -80,7 +80,8 @@
         let state = { 
             playerStack: 1000, aiStack: 1000, pot: 0, 
             playerHand: [], aiHand: [], board: [], 
-            phase: 'preflop', currentBet: 20 
+            phase: 'preflop', currentBet: 20,
+            raiseCount: 0 // 今回のラウンドでのプレイヤーのレイズ回数を記録
         };
         const valMap = {'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14};
 
@@ -94,18 +95,13 @@
             state.playerHand = [deck.pop(), deck.pop()];
             state.aiHand = [deck.pop(), deck.pop()];
             state.board = [deck.pop(), deck.pop(), deck.pop(), deck.pop(), deck.pop()];
-            
-            // 初期設定
-            state.currentBet = 20; // コールに必要な額
-            state.pot = 40;        // 最初からブラインドが入っている状態
-            state.playerStack -= 20;
-            state.aiStack -= 20;
-            state.phase = 'preflop';
+            state.pot = 40; state.playerStack -= 20; state.aiStack -= 20;
+            state.phase = 'preflop'; state.currentBet = 20; state.raiseCount = 0;
             
             document.getElementById('next-round-btn').classList.add('hidden');
             document.getElementById('controls').classList.remove('hidden');
             updateUI();
-            log("--- NEW ROUND ---");
+            log("--- NEW ROUND START ---");
         }
 
         function evaluateHand(hand, boardCards) {
@@ -135,55 +131,68 @@
             if (trips.length > 0) return {s: 3000 + trips[0], n: "スリーカード"};
             if (pairs.length >= 2) return {s: 2000 + pairs[0]*10 + pairs[1], n: "ツーペア"};
             if (pairs.length === 1) return {s: 1000 + pairs[0], n: "ワンペア"};
-            const high = cards.length > 0 ? Math.max(...cards.map(c=>c.v)) : 0;
-            return {s: high, n: "ハイカード"};
+            return {s: cards.length > 0 ? Math.max(...cards.map(c=>c.v)) : 0, n: "ハイカード"};
         }
 
-        function aiDecision() {
+        function aiDecision(playerAction) {
             const visibleCount = state.phase === 'preflop' ? 0 : state.phase === 'flop' ? 3 : state.phase === 'turn' ? 4 : 5;
             const res = evaluateHand(state.aiHand, state.board.slice(0, visibleCount));
+            
+            // プレイヤーのレイズ回数に応じて「降りやすさ」のしきい値を調整
+            // レイズ回数が多いほど、AIは強い役を持っていないと付いてこなくなる
+            let foldThreshold = 0.3 + (state.raiseCount * 0.2); // レイズ1回で+20%降りやすくなる
 
             if (state.phase === 'preflop') {
                 const v1 = valMap[state.aiHand[0].v], v2 = valMap[state.aiHand[1].v];
-                if (v1 + v2 < 12 && v1 !== v2 && state.aiHand[0].s !== state.aiHand[1].s) return 'fold';
+                if (state.raiseCount > 0 && v1 + v2 < 18 && v1 !== v2) return 'fold'; 
+                if (v1 + v2 < 12 && v1 !== v2) return 'fold';
                 return 'call';
             }
-            if (res.s < 1000 && Math.random() > 0.4) return 'fold';
+
+            // ポストフロップ
+            if (res.s < 1000) { // ハイカード
+                return (Math.random() < foldThreshold) ? 'fold' : 'call';
+            } else if (res.s < 2000) { // ワンペア
+                // プレイヤーが2回以上レイズしていたら、ワンペアでも怖くなって降りる可能性がある
+                if (state.raiseCount >= 2 && Math.random() < 0.5) return 'fold';
+                return 'call';
+            }
             return 'call';
         }
 
         function handleAction(action) {
             if (action === 'fold') { endRound('AI'); return; }
             
-            // プレイヤーがチップを払う
-            let payAmount = (action === 'raise') ? state.currentBet + 50 : state.currentBet;
+            let payAmount = state.currentBet;
+            if (action === 'raise') {
+                payAmount += 50; 
+                state.currentBet += 50;
+                state.raiseCount++; // あなたの強気度をカウント
+            }
+            
             state.playerStack -= payAmount;
             state.pot += payAmount;
-            if (action === 'raise') state.currentBet += 50;
-
-            log(`You ${action} (${payAmount} chips).`);
+            log(`You ${action} (${payAmount}).`);
             updateUI();
 
             setTimeout(() => {
-                const aiAction = aiDecision();
+                const aiAction = aiDecision(action);
+                
                 if (aiAction === 'fold') {
-                    log("AI: フォールドします。あなたの勝ちです。");
+                    log("AI: 「強気ですね...降ります。」 AIがフォールドしました。");
                     endRound('Player');
                     return;
                 }
 
-                // AIも同額を払う
                 state.aiStack -= state.currentBet;
                 state.pot += state.currentBet;
-                log(`AI: コールします (${state.currentBet} chips)。`);
+                log(`AI: コールします (${state.currentBet})。`);
 
-                // フェーズ移行
                 if (state.phase === 'preflop') state.phase = 'flop';
                 else if (state.phase === 'flop') state.phase = 'turn';
                 else if (state.phase === 'turn') state.phase = 'river';
                 else { state.phase = 'showdown'; determineWinner(); return; }
                 
-                // 次のフェーズの基本ベット額をリセット
                 state.currentBet = 20; 
                 updateUI();
             }, 600);
@@ -192,7 +201,7 @@
         function determineWinner() {
             const p = evaluateHand(state.playerHand, state.board);
             const a = evaluateHand(state.aiHand, state.board);
-            log(`YOU: ${p.n} vs AI: ${a.n}`);
+            log(`SHOWDOWN: YOU(${p.n}) vs AI(${a.n})`);
             if (p.s > a.s) endRound('Player');
             else if (a.s > p.s) endRound('AI');
             else endRound('Draw');
@@ -200,10 +209,10 @@
 
         function endRound(winner) {
             state.phase = 'showdown'; updateUI();
-            if (winner === 'Player') { state.playerStack += state.pot; log("🎊 YOU WIN!"); }
-            else if (winner === 'AI') { state.aiStack += state.pot; log("💀 AI WINS."); }
+            if (winner === 'Player') { state.playerStack += state.pot; log("🎊 WINNER: YOU!"); }
+            else if (winner === 'AI') { state.aiStack += state.pot; log("💀 WINNER: AI."); }
             else { state.playerStack += state.pot/2; state.aiStack += state.pot/2; log("🤝 DRAW."); }
-            state.pot = 0; state.currentBet = 0;
+            state.pot = 0;
             document.getElementById('controls').classList.add('hidden');
             document.getElementById('next-round-btn').classList.remove('hidden');
         }
@@ -212,8 +221,14 @@
             document.getElementById('player-stack').innerText = state.playerStack;
             document.getElementById('ai-stack').innerText = state.aiStack;
             document.getElementById('pot-amount').innerText = state.pot;
-            document.getElementById('call-amount').innerText = state.currentBet; // コール額を反映
+            document.getElementById('call-amount').innerText = state.currentBet;
             
+            // 警戒度の表示更新
+            const cautionEl = document.getElementById('ai-caution');
+            if (state.raiseCount === 0) { cautionEl.innerText = "Normal"; cautionEl.className = "text-green-400"; }
+            else if (state.raiseCount === 1) { cautionEl.innerText = "Watching..."; cautionEl.className = "text-yellow-400"; }
+            else { cautionEl.innerText = "WARY (High)"; cautionEl.className = "text-red-500 font-bold"; }
+
             const boardDiv = document.getElementById('board');
             let visibleCount = state.phase === 'flop' ? 3 : state.phase === 'turn' ? 4 : (state.phase === 'river' || state.phase === 'showdown') ? 5 : 0;
             let boardHTML = "";
@@ -229,12 +244,12 @@
             
             const aiHandDiv = document.getElementById('ai-hand');
             if (state.phase === 'showdown') aiHandDiv.innerHTML = state.aiHand.map(c => renderCard(c)).join('');
-            else aiHandDiv.innerHTML = '<div class="w-20 h-28 bg-blue-900 rounded-xl border-2 border-blue-400 shadow-2xl flex items-center justify-center text-blue-200 text-3xl font-bold">?</div>'.repeat(2);
+            else aiHandDiv.innerHTML = '<div class="w-20 h-28 bg-blue-900 rounded-xl border-2 border-blue-400 shadow-2xl flex items-center justify-center text-blue-200 text-3xl font-bold italic shadow-blue-500/20">?</div>'.repeat(2);
         }
 
         function renderCard(c) {
             const color = (c.s === '♥' || c.s === '♦') ? 'text-red-600' : 'text-gray-900';
-            return `<div class="w-20 h-28 bg-white rounded-xl flex flex-col items-center justify-center border-2 border-gray-300 ${color} font-black text-2xl card">
+            return `<div class="w-20 h-28 bg-white rounded-xl flex flex-col items-center justify-center border-2 border-gray-300 ${color} font-black text-2xl card transform transition-all hover:-translate-y-1">
                 <div class="leading-none">${c.v}</div><div class="text-3xl mt-1">${c.s}</div></div>`;
         }
 
