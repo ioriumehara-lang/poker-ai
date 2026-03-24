@@ -3,46 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Poker AI - Pro Edition</title>
+    <title>Poker AI - Pro Edition with Guide</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .card { border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: transform 0.2s; }
         .bg-poker { background: radial-gradient(circle, #2d5a27 0%, #1a3a16 100%); }
+        /* スクロールバーのカスタマイズ */
+        #log::-webkit-scrollbar { width: 5px; }
+        #log::-webkit-scrollbar-thumb { background: #397d34; border-radius: 10px; }
     </style>
 </head>
-<body class="bg-gray-900 font-sans text-white">
-    <div id="game-container" class="max-w-2xl mx-auto my-10 p-8 bg-poker rounded-3xl shadow-2xl border-4 border-yellow-700">
-        <h1 class="text-4xl font-extrabold text-center mb-8 text-yellow-500 italic uppercase tracking-tighter">Pro Texas Hold'em</h1>
+<body class="bg-gray-900 font-sans text-white p-4">
+    <div class="max-w-6xl mx-auto flex flex-col lg:flex-row gap-6">
         
-        <div class="mb-10 p-4 border-2 border-dashed border-green-500 rounded-2xl text-center bg-black bg-opacity-20">
-            <h2 class="text-lg font-bold mb-3 text-green-300">AI Player (Stack: <span id="ai-stack">1000</span>)</h2>
-            <div id="ai-hand" class="flex justify-center gap-3 h-28"></div>
-        </div>
-
-        <div class="mb-10 text-center">
-            <div id="board" class="flex justify-center gap-3 h-28 min-h-[7rem]"></div>
-            <div class="mt-6 inline-block bg-black bg-opacity-50 px-6 py-2 rounded-full border border-yellow-600">
-                <span class="text-yellow-400 font-bold text-xl">POT: <span id="pot-amount">0</span></span>
-            </div>
-        </div>
-
-        <div class="p-6 bg-green-900 bg-opacity-40 rounded-2xl text-center border border-white border-opacity-20 shadow-inner">
-            <h2 class="text-lg font-bold mb-3 text-blue-300">Your Hand (Stack: <span id="player-stack">1000</span>)</h2>
-            <div id="player-hand" class="flex justify-center gap-3 mb-8 h-28"></div>
+        <div id="game-container" class="flex-1 p-8 bg-poker rounded-3xl shadow-2xl border-4 border-yellow-700 relative">
+            <h1 class="text-4xl font-extrabold text-center mb-8 text-yellow-500 italic uppercase tracking-tighter">Pro Texas Hold'em</h1>
             
-            <div id="controls" class="flex justify-center gap-4">
-                <button onclick="handleAction('fold')" class="bg-red-700 hover:bg-red-600 px-8 py-3 rounded-xl font-bold transition-all shadow-lg transform hover:scale-105">Fold</button>
-                <button onclick="handleAction('call')" class="bg-yellow-500 hover:bg-yellow-400 px-8 py-3 rounded-xl font-bold transition-all text-gray-900 shadow-lg transform hover:scale-105">Call</button>
-                <button onclick="handleAction('raise')" class="bg-blue-600 hover:bg-blue-500 px-8 py-3 rounded-xl font-bold transition-all shadow-lg transform hover:scale-105">Raise</button>
+            <div class="mb-10 p-4 border-2 border-dashed border-green-500 rounded-2xl text-center bg-black bg-opacity-20">
+                <h2 class="text-lg font-bold mb-3 text-green-300">AI Player (Stack: <span id="ai-stack">1000</span>)</h2>
+                <div id="ai-hand" class="flex justify-center gap-3 h-28"></div>
             </div>
-            <div id="next-round-btn" class="hidden">
-                <button onclick="startNewGame()" class="bg-white text-green-900 px-12 py-4 rounded-full font-black text-xl hover:bg-yellow-100 transition shadow-white/20 shadow-lg">NEXT ROUND</button>
+
+            <div class="mb-10 text-center">
+                <div id="board" class="flex justify-center gap-3 h-28 min-h-[7rem]"></div>
+                <div class="mt-6 inline-block bg-black bg-opacity-50 px-6 py-2 rounded-full border border-yellow-600">
+                    <span class="text-yellow-400 font-bold text-xl">POT: <span id="pot-amount">0</span></span>
+                </div>
+            </div>
+
+            <div class="p-6 bg-green-900 bg-opacity-40 rounded-2xl text-center border border-white border-opacity-20 shadow-inner">
+                <h2 class="text-lg font-bold mb-1 text-blue-300">Your Hand (Stack: <span id="player-stack">1000</span>)</h2>
+                <div id="current-hand-name" class="text-yellow-400 font-bold mb-3 h-6 text-sm uppercase tracking-widest">---</div>
+                
+                <div id="player-hand" class="flex justify-center gap-3 mb-8 h-28"></div>
+                
+                <div id="controls" class="flex justify-center gap-4">
+                    <button onclick="handleAction('fold')" class="bg-red-700 hover:bg-red-600 px-8 py-3 rounded-xl font-bold transition-all shadow-lg transform hover:scale-105">Fold</button>
+                    <button onclick="handleAction('call')" class="bg-yellow-500 hover:bg-yellow-400 px-8 py-3 rounded-xl font-bold transition-all text-gray-900 shadow-lg transform hover:scale-105">Call</button>
+                    <button onclick="handleAction('raise')" class="bg-blue-600 hover:bg-blue-500 px-8 py-3 rounded-xl font-bold transition-all shadow-lg transform hover:scale-105">Raise</button>
+                </div>
+                <div id="next-round-btn" class="hidden">
+                    <button onclick="startNewGame()" class="bg-white text-green-900 px-12 py-4 rounded-full font-black text-xl hover:bg-yellow-100 transition shadow-white/20 shadow-lg">NEXT ROUND</button>
+                </div>
+            </div>
+
+            <div id="log" class="mt-8 p-4 bg-black bg-opacity-60 text-sm h-32 overflow-y-auto rounded-xl text-green-400 font-mono border border-green-900 shadow-inner text-left">
+                Welcome to the Pro Table.
             </div>
         </div>
 
-        <div id="log" class="mt-8 p-4 bg-black bg-opacity-60 text-sm h-40 overflow-y-auto rounded-xl text-green-400 font-mono border border-green-900 shadow-inner">
-            Welcome to the Pro Table.
+        <div class="w-full lg:w-64 p-6 bg-gray-800 rounded-3xl border-2 border-gray-700 shadow-xl">
+            <h3 class="text-yellow-500 font-black mb-4 text-center border-b border-gray-600 pb-2">HAND RANKINGS</h3>
+            <ul class="text-xs space-y-2 text-gray-300">
+                <li class="flex justify-between"><span class="text-white font-bold">Royal Flush</span> <span>最強</span></li>
+                <li class="flex justify-between"><span>Straight Flush</span></li>
+                <li class="flex justify-between"><span>4 of a Kind</span></li>
+                <li class="flex justify-between"><span>Full House</span></li>
+                <li class="flex justify-between"><span>Flush</span></li>
+                <li class="flex justify-between"><span>Straight</span></li>
+                <li class="flex justify-between"><span>3 of a Kind</span></li>
+                <li class="flex justify-between"><span>Two Pair</span></li>
+                <li class="flex justify-between"><span>One Pair</span></li>
+                <li class="flex justify-between"><span class="text-gray-500">High Card</span> <span>最弱</span></li>
+            </ul>
+            <div class="mt-6 p-3 bg-black bg-opacity-30 rounded-lg text-[10px] leading-relaxed text-gray-400">
+                Tip: Aは1としても14としてもストレートに使えます。
+            </div>
         </div>
+
     </div>
 
     <script>
@@ -70,34 +98,32 @@
             log("--- NEW ROUND ---");
         }
 
-        // --- プロフェッショナル役判定エンジン ---
         function evaluateHand(hand, board) {
-            const cards = [...hand, ...board].map(c => ({v: valMap[c.v], s: c.s}));
-            // 数値順にソート
+            const currentBoard = state.phase === 'preflop' ? [] : 
+                                 state.phase === 'flop' ? board.slice(0,3) :
+                                 state.phase === 'turn' ? board.slice(0,4) : board;
+            
+            const cards = [...hand, ...currentBoard].map(c => ({v: valMap[c.v], s: c.s}));
             cards.sort((a,b) => a.v - b.v);
             
             const counts = {}; cards.forEach(c => counts[c.v] = (counts[c.v] || 0) + 1);
             const suitsCount = {}; cards.forEach(c => suitsCount[c.s] = (suitsCount[c.s] || 0) + 1);
             
-            // フラッシュ判定
             const flushSuit = Object.keys(suitsCount).find(s => suitsCount[s] >= 5);
             const isFlush = !!flushSuit;
 
-            // ストレート判定 (A,2,3,4,5の特殊ケース含む)
             const uniqueVals = [...new Set(cards.map(c => c.v))];
-            if (uniqueVals.includes(14)) uniqueVals.unshift(1); // Aを1としても扱う
+            if (uniqueVals.includes(14)) uniqueVals.unshift(1);
             let straightHigh = -1;
             for (let i = 0; i <= uniqueVals.length - 5; i++) {
                 if (uniqueVals[i+4] - uniqueVals[i] === 4) straightHigh = uniqueVals[i+4];
             }
             const isStraight = straightHigh !== -1;
 
-            const cVals = Object.values(counts);
             const pairs = Object.keys(counts).filter(k => counts[k] === 2).map(Number).sort((a,b)=>b-a);
             const trips = Object.keys(counts).filter(k => counts[k] === 3).map(Number).sort((a,b)=>b-a);
             const quads = Object.keys(counts).filter(k => counts[k] === 4).map(Number).sort((a,b)=>b-a);
 
-            // スコアリング (役の強さ * 1000 + キッカー)
             if (isFlush && isStraight && straightHigh === 14) return {s: 9000, n: "ロイヤルフラッシュ"};
             if (isFlush && isStraight) return {s: 8000 + straightHigh, n: "ストレートフラッシュ"};
             if (quads.length > 0) return {s: 7000 + quads[0], n: "フォーカード"};
@@ -107,7 +133,7 @@
             if (trips.length > 0) return {s: 3000 + trips[0], n: "スリーカード"};
             if (pairs.length >= 2) return {s: 2000 + pairs[0]*10 + pairs[1], n: "ツーペア"};
             if (pairs.length === 1) return {s: 1000 + pairs[0], n: "ワンペア"};
-            return {s: Math.max(...cards.map(c=>c.v)), n: "ハイカード"};
+            return {s: Math.max(...cards.map(c=>c.v), 0), n: "ハイカード"};
         }
 
         function determineWinner() {
@@ -129,7 +155,7 @@
                 else { state.phase = 'showdown'; determineWinner(); return; }
                 log(`AI calls. Moving to ${state.phase}.`);
                 updateUI();
-            }, 600);
+            }, 500);
         }
 
         function endRound(winner) {
@@ -146,6 +172,11 @@
             document.getElementById('player-stack').innerText = state.playerStack;
             document.getElementById('ai-stack').innerText = state.aiStack;
             document.getElementById('pot-amount').innerText = state.pot;
+            
+            // 自分の現在の役を表示
+            const currentHand = evaluateHand(state.playerHand, state.board);
+            document.getElementById('current-hand-name').innerText = currentHand.n;
+
             document.getElementById('player-hand').innerHTML = state.playerHand.map(c => renderCard(c)).join('');
             const boardDiv = document.getElementById('board');
             let visible = [];
@@ -166,7 +197,7 @@
 
         function log(m) {
             const l = document.getElementById('log');
-            l.innerHTML = `<span class="text-white opacity-50">></span> ${m}<br>` + l.innerHTML;
+            l.innerHTML = `<span class="text-white opacity-30">></span> ${m}<br>` + l.innerHTML;
         }
 
         startNewGame();
