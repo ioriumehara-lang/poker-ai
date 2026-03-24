@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>本格ポーカーAI - 洗練版 v2.5</title>
+    <title>本格ポーカーAI - 強気なギャンブラー版 v2.6</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .card { border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: all 0.2s ease; }
@@ -13,57 +13,43 @@
         .btn-push { transition: all 0.1s; border-bottom: 4px solid rgba(0,0,0,0.3); }
         .btn-push:active:not(:disabled) { transform: translateY(2px); border-bottom-width: 1px; }
         .btn-push:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
-        
-        /* 控えめなリザルトバナー */
-        #result-banner {
-            animation: slideDown 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
-            background: rgba(0, 0, 0, 0.85);
-            border-bottom: 2px solid #eab308;
-        }
+        #result-banner { animation: slideDown 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28); background: rgba(0, 0, 0, 0.85); border-bottom: 2px solid #ef4444; }
         @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
         .bubble {
             position: relative; background: #ffffff; color: #1a1a1a;
             border-radius: 12px; padding: 6px 12px; font-weight: bold;
             box-shadow: 0 4px 15px rgba(0,0,0,0.3); animation: pop 0.3s ease-out;
         }
-        .bubble::after {
-            content: ''; position: absolute; bottom: -8px; left: 50%;
-            transform: translateX(-50%); border-width: 8px 8px 0;
-            border-style: solid; border-color: #ffffff transparent transparent;
-        }
+        .bubble::after { content: ''; position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); border-width: 8px 8px 0; border-style: solid; border-color: #ffffff transparent transparent; }
         @keyframes pop { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
     </style>
 </head>
 <body class="bg-gray-900 font-sans text-white p-1 antialiased overflow-hidden">
 
     <div id="result-banner" class="hidden fixed top-0 left-0 w-full z-50 py-3 flex items-center justify-center gap-6 shadow-2xl">
-        <span id="result-text" class="text-3xl font-black italic">YOU WIN!</span>
-        <span id="result-detail" class="text-xl text-yellow-500 font-bold border-l border-gray-600 pl-6">フルハウス</span>
+        <span id="result-text" class="text-3xl font-black italic">---</span>
+        <span id="result-detail" class="text-xl text-yellow-500 font-bold border-l border-gray-600 pl-6">---</span>
     </div>
 
     <div class="max-w-6xl mx-auto h-screen flex flex-col p-1">
-        
-        <div class="mb-1 p-2 rounded-lg bg-gray-800/50 flex items-center justify-between px-4 border border-white/5">
-            <h3 class="text-yellow-500 font-black text-[10px] tracking-widest uppercase">AI思考エンジン v2.5</h3>
-            <div class="flex gap-4 text-[10px] text-gray-400">
-                <span><b class="text-yellow-600">●</b> 戦略的思考可視化</span>
-                <span><b class="text-blue-500">●</b> スマートリザルト</span>
+        <div class="mb-1 p-2 rounded-lg bg-red-900/20 flex items-center justify-between px-4 border border-red-500/30">
+            <h3 class="text-red-500 font-black text-[10px] tracking-widest uppercase">AI性格: 強気なギャンブラー v2.6</h3>
+            <div class="flex gap-4 text-[10px] text-gray-400 font-bold">
+                <span class="text-red-400">● ブラフ発動率UP</span>
+                <span class="text-orange-400">● ギャッパー積極参戦</span>
             </div>
         </div>
 
         <div class="flex flex-col lg:flex-row gap-2 flex-1 overflow-hidden">
-            
             <div id="game-container" class="flex-[3] p-3 bg-poker rounded-[2rem] shadow-2xl border-2 border-yellow-800/30 flex flex-col justify-between overflow-hidden relative">
                 
                 <div class="flex flex-col items-center">
                     <div id="ai-bubble-container" class="h-10 mb-1 flex items-end">
                         <div id="ai-bubble" class="bubble hidden text-[11px] text-center">...</div>
                     </div>
-                    
-                    <div class="w-full max-w-md p-2 border border-green-500/20 rounded-2xl bg-black/20 flex flex-col items-center">
+                    <div class="w-full max-w-md p-2 border border-red-500/20 rounded-2xl bg-black/20 flex flex-col items-center">
                         <div class="flex items-center gap-4 mb-1 text-xs">
-                            <span class="text-green-300 font-bold">AI プレイヤー</span>
+                            <span class="text-red-400 font-bold uppercase">AI Gambler</span>
                             <span class="text-gray-400 font-mono">CHIPS: <b id="ai-stack" class="text-white">1000</b></span>
                         </div>
                         <div id="ai-hand" class="flex justify-center gap-3 h-28"></div>
@@ -74,38 +60,36 @@
                     <div id="board" class="flex justify-center gap-3 h-28"></div>
                     <div class="mt-2 flex gap-4">
                         <div class="bg-black/40 px-6 py-1 rounded-lg border border-yellow-700/50 text-center min-w-[120px]">
-                            <p class="text-[9px] text-yellow-600 font-bold">POT</p>
+                            <p class="text-[9px] text-yellow-600 font-bold uppercase">Pot</p>
                             <span class="text-yellow-500 font-black text-xl" id="pot-amount">0</span>
                         </div>
                         <div class="bg-black/40 px-6 py-1 rounded-lg border border-blue-700/50 text-center min-w-[120px]">
-                            <p class="text-[9px] text-blue-600 font-bold">CALL</p>
+                            <p class="text-[9px] text-blue-600 font-bold uppercase">Call</p>
                             <span class="text-blue-400 font-black text-xl" id="call-amount">0</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="p-3 bg-green-950/30 rounded-[2.5rem] border border-white/5 flex flex-col items-center shadow-inner">
-                    <div class="flex items-center gap-6 mb-2">
-                        <span class="text-blue-300 font-bold text-sm uppercase tracking-wider">Player</span>
-                        <span class="text-xs text-gray-400 font-mono">CHIPS: <b id="player-stack" class="text-white">1000</b></span>
-                        <span id="current-hand-name" class="text-yellow-500 text-xs font-black italic tracking-widest uppercase">---</span>
+                    <div class="flex items-center gap-6 mb-2 text-xs">
+                        <span class="text-blue-300 font-bold uppercase tracking-wider">Player</span>
+                        <span class="text-gray-400 font-mono">CHIPS: <b id="player-stack" class="text-white">1000</b></span>
+                        <span id="current-hand-name" class="text-yellow-500 font-black italic tracking-widest uppercase">---</span>
                     </div>
-                    
                     <div id="player-hand" class="flex justify-center gap-3 mb-4 h-28"></div>
-                    
                     <div id="controls" class="flex gap-4">
-                        <button id="btn-fold" onclick="handleAction('fold')" class="btn-push bg-red-800 hover:bg-red-700 px-10 py-3 rounded-xl font-black text-lg">フォールド</button>
+                        <button id="btn-fold" onclick="handleAction('fold')" class="btn-push bg-gray-800 hover:bg-gray-700 px-10 py-3 rounded-xl font-black text-lg">フォールド</button>
                         <button id="btn-call" onclick="handleAction('call')" class="btn-push bg-yellow-600 hover:bg-yellow-500 px-10 py-3 rounded-xl font-black text-lg text-gray-950">コール</button>
                         <button id="btn-raise" onclick="handleAction('raise')" class="btn-push bg-blue-700 hover:bg-blue-600 px-10 py-3 rounded-xl font-black text-lg text-white">レイズ</button>
                     </div>
                     <div id="next-round-btn" class="hidden">
-                        <button onclick="startNewGame()" class="bg-white text-green-950 px-16 py-4 rounded-full font-black text-xl hover:bg-yellow-100 transition-all shadow-xl">次のラウンドを開始</button>
+                        <button onclick="startNewGame()" class="bg-white text-gray-900 px-16 py-4 rounded-full font-black text-xl hover:bg-red-500 hover:text-white transition-all shadow-xl uppercase">Next Round</button>
                     </div>
                 </div>
             </div>
 
-            <div id="log" class="w-full lg:w-64 p-3 bg-black/80 text-[11px] rounded-2xl text-green-500 font-mono border border-green-900/30 overflow-y-auto leading-tight">
-                [System] Session Started...
+            <div id="log" class="w-full lg:w-64 p-3 bg-black/80 text-[11px] rounded-2xl text-red-400 font-mono border border-red-900/20 overflow-y-auto leading-tight">
+                [System] Gambler Mode Active.
             </div>
         </div>
     </div>
@@ -135,16 +119,13 @@
             document.getElementById('next-round-btn').classList.add('hidden');
             document.getElementById('controls').classList.remove('hidden');
             document.getElementById('result-banner').classList.add('hidden');
-            setButtonsEnabled(true);
-            hideBubble();
-            updateUI();
+            setButtonsEnabled(true); hideBubble(); updateUI();
             log("--- ROUND START ---");
         }
 
         function showBubble(text) {
             const b = document.getElementById('ai-bubble');
-            b.innerText = text;
-            b.classList.remove('hidden');
+            b.innerText = text; b.classList.remove('hidden');
         }
 
         function hideBubble() { document.getElementById('ai-bubble').classList.add('hidden'); }
@@ -181,35 +162,40 @@
             const v1 = valMap[state.aiHand[0].v], v2 = valMap[state.aiHand[1].v];
             const diff = Math.abs(v1 - v2);
 
+            // ギャンブラー的性格の追加（ブラフ）
+            const isBluffing = Math.random() < 0.25;
+
             if (state.phase === 'preflop') {
-                if (v1 === v2) { showBubble("ペアだ、コール！"); return 'call'; }
-                if (diff <= 2) { showBubble("ストレートいけるかも。"); return 'call'; }
-                if (v1 >= 12 || v2 >= 12) { showBubble("絵札がある、勝負。"); return 'call'; }
-                if (v1 + v2 < 12) { showBubble("今回は降りるよ。"); return 'fold'; }
-                showBubble("コールするね。"); return 'call';
+                if (v1 === v2) { showBubble("ペアだ、逃がさないよ。"); return 'call'; }
+                if (diff <= 2) { showBubble(`${Math.min(v1,v2)}-${Math.max(v1,v2)}か、ロマンあるね。`); return 'call'; }
+                if (v1 >= 10 || v2 >= 10) { showBubble("絵札があれば勝負さ。"); return 'call'; }
+                if (isBluffing) { showBubble("弱気な顔してコールだ。"); return 'call'; }
+                if (v1 + v2 < 10) { showBubble("…ここは引いておくよ。"); return 'fold'; }
+                return 'call';
             }
-            if (hand.s >= 2000) { showBubble("いい役だ。コール！"); return 'call'; }
-            if (hand.s >= 1000) { showBubble("ワンペア、勝負。"); return 'call'; }
-            if (Math.random() < 0.3) { showBubble("降りるね。"); return 'fold'; }
-            showBubble("受けて立つよ。"); return 'call';
+
+            if (hand.s >= 2000) { showBubble("完成したよ。さあ、勝負！"); return 'call'; }
+            if (hand.s >= 1000) { showBubble("ワンペアあれば十分。"); return 'call'; }
+            if (isBluffing) { showBubble("ハッタリも実力のうち。コール！"); return 'call'; }
+            
+            // 慎重さを極限まで排除（降りる確率を30%から15%に）
+            if (Math.random() < 0.15) { showBubble("…ついていけないな。"); return 'fold'; }
+            showBubble("受けて立つさ。"); return 'call';
         }
 
         function handleAction(action) {
-            if (state.isWaiting) return;
-            setButtonsEnabled(false);
+            if (state.isWaiting) return; setButtonsEnabled(false);
             if (action === 'fold') { endRound('AI'); return; }
             let pay = state.currentBet;
             if (action === 'raise') { pay += 50; state.currentBet += 50; state.raiseCount++; }
-            state.playerStack -= pay; state.pot += pay;
-            updateUI();
+            state.playerStack -= pay; state.pot += pay; updateUI();
             
             setTimeout(() => {
                 const dec = aiDecision();
                 if (dec === 'fold') { log("AI Folded."); endRound('Player'); return; }
                 state.aiStack -= state.currentBet; state.pot += state.currentBet;
                 setTimeout(() => {
-                    nextPhase();
-                    updateUI();
+                    nextPhase(); updateUI();
                     if (state.phase !== 'showdown') setButtonsEnabled(true);
                 }, 800);
             }, 500);
@@ -228,16 +214,13 @@
             const banner = document.getElementById('result-banner');
             const rText = document.getElementById('result-text');
             const rDetail = document.getElementById('result-detail');
-            
-            showBubble(`僕の手は「${a.n}」だよ。`);
-            banner.classList.remove('hidden');
-            
+            showBubble(`僕の手は「${a.n}」さ！`); banner.classList.remove('hidden');
             if (p.s > a.s) {
-                rText.innerText = "YOU WIN"; rText.className = "text-3xl font-black text-yellow-500 italic";
-                rDetail.innerText = `あなたの勝ち: ${p.n}`; endRound('Player');
+                rText.innerText = "PLAYER WIN"; rText.className = "text-3xl font-black text-blue-500 italic";
+                rDetail.innerText = `勝ち役: ${p.n}`; endRound('Player');
             } else if (a.s > p.s) {
-                rText.innerText = "AI WIN"; rText.className = "text-3xl font-black text-red-500 italic";
-                rDetail.innerText = `AIの勝ち: ${a.n}`; endRound('AI');
+                rText.innerText = "GAMBLER WIN"; rText.className = "text-3xl font-black text-red-500 italic";
+                rDetail.innerText = `負け役: ${a.n}`; endRound('AI');
             } else {
                 rText.innerText = "DRAW"; rText.className = "text-3xl font-black text-white italic";
                 rDetail.innerText = `引き分け: ${p.n}`; endRound('Draw');
@@ -245,14 +228,11 @@
         }
 
         function endRound(winner) {
-            state.phase = 'showdown';
-            updateUI();
+            state.phase = 'showdown'; updateUI();
             if (winner === 'Player') state.playerStack += state.pot;
             else if (winner === 'AI') state.aiStack += state.pot;
             else { state.playerStack += state.pot/2; state.aiStack += state.pot/2; }
-            state.pot = 0;
-            document.getElementById('controls').classList.add('hidden');
-            document.getElementById('next-round-btn').classList.remove('hidden');
+            state.pot = 0; document.getElementById('controls').classList.add('hidden'); document.getElementById('next-round-btn').classList.remove('hidden');
         }
 
         function updateUI() {
@@ -263,10 +243,10 @@
             const bDiv = document.getElementById('board');
             let vis = state.phase === 'flop' ? 3 : (state.phase === 'turn' ? 4 : (state.phase === 'river' || state.phase === 'showdown' ? 5 : 0));
             bDiv.innerHTML = "";
-            for(let i=0; i<5; i++) bDiv.innerHTML += i < vis ? renderCard(state.board[i]) : `<div class="w-20 h-28 bg-black/40 rounded-lg border border-green-900/40 flex items-center justify-center text-green-900/40 text-3xl font-black">?</div>`;
+            for(let i=0; i<5; i++) bDiv.innerHTML += i < vis ? renderCard(state.board[i]) : `<div class="w-20 h-28 bg-black/40 rounded-lg border border-red-900/20 flex items-center justify-center text-red-900/20 text-3xl font-black">?</div>`;
             document.getElementById('current-hand-name').innerText = evaluateHand(state.playerHand, state.board.slice(0, vis)).n;
             document.getElementById('player-hand').innerHTML = state.playerHand.map(c => renderCard(c)).join('');
-            document.getElementById('ai-hand').innerHTML = state.phase === 'showdown' ? state.aiHand.map(c => renderCard(c)).join('') : '<div class="w-20 h-28 bg-blue-900 rounded-lg border-2 border-blue-400 flex items-center justify-center text-blue-200 text-3xl font-black shadow-lg">?</div>'.repeat(2);
+            document.getElementById('ai-hand').innerHTML = state.phase === 'showdown' ? state.aiHand.map(c => renderCard(c)).join('') : '<div class="w-20 h-28 bg-red-950 rounded-lg border-2 border-red-500 flex items-center justify-center text-red-200 text-3xl font-black shadow-lg">?</div>'.repeat(2);
         }
 
         function renderCard(c) {
@@ -274,7 +254,7 @@
             return `<div class="w-20 h-28 bg-white rounded-lg flex flex-col items-center justify-center border border-gray-300 ${col} font-black text-2xl card"><div class="leading-none text-xl">${c.v}</div><div class="text-3xl mt-1">${c.s}</div></div>`;
         }
 
-        function log(m) { const l = document.getElementById('log'); l.innerHTML = `<span class="opacity-20">></span> ${m}<br>` + l.innerHTML; }
+        function log(m) { const l = document.getElementById('log'); l.innerHTML = `<span class="opacity-30">></span> ${m}<br>` + l.innerHTML; }
 
         startNewGame();
     </script>
