@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Poker AI - Pro Edition Fixed</title>
+    <title>Poker AI - True Logic Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .card { border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: transform 0.2s; }
@@ -24,8 +24,7 @@
             </div>
 
             <div class="mb-10">
-                <div id="board" class="flex justify-center gap-3 h-28 min-h-[7rem]">
-                    </div>
+                <div id="board" class="flex justify-center gap-3 h-28 min-h-[7rem]"></div>
                 <div class="mt-6 inline-block bg-black bg-opacity-50 px-6 py-2 rounded-full border border-yellow-600">
                     <span class="text-yellow-400 font-bold text-xl">POT: <span id="pot-amount">0</span></span>
                 </div>
@@ -34,7 +33,6 @@
             <div class="p-6 bg-green-900 bg-opacity-40 rounded-2xl border border-white border-opacity-20 shadow-inner">
                 <h2 class="text-lg font-bold mb-1 text-blue-300">Your Hand (Stack: <span id="player-stack">1000</span>)</h2>
                 <div id="current-hand-name" class="text-yellow-400 font-bold mb-3 h-6 text-sm uppercase tracking-widest">---</div>
-                
                 <div id="player-hand" class="flex justify-center gap-3 mb-8 h-28"></div>
                 
                 <div id="controls" class="flex justify-center gap-4">
@@ -48,7 +46,7 @@
             </div>
 
             <div id="log" class="mt-8 p-4 bg-black bg-opacity-60 text-sm h-32 overflow-y-auto rounded-xl text-green-400 font-mono border border-green-900 shadow-inner text-left">
-                Welcome back to the Pro Table.
+                Logic Engine Loaded. AI is now thinking.
             </div>
         </div>
 
@@ -85,27 +83,22 @@
             let deck = createDeck();
             state.playerHand = [deck.pop(), deck.pop()];
             state.aiHand = [deck.pop(), deck.pop()];
-            // 最初に5枚すべて決めてしまう
             state.board = [deck.pop(), deck.pop(), deck.pop(), deck.pop(), deck.pop()];
             state.pot = 40; state.playerStack -= 20; state.aiStack -= 20;
             state.phase = 'preflop';
             document.getElementById('next-round-btn').classList.add('hidden');
             document.getElementById('controls').classList.remove('hidden');
             updateUI();
-            log("--- NEW ROUND START ---");
+            log("--- NEW ROUND ---");
         }
 
         function evaluateHand(hand, boardCards) {
-            // handと「今見えているボード」を合体させて判定
             const cards = [...hand, ...boardCards].map(c => ({v: valMap[c.v], s: c.s}));
             cards.sort((a,b) => a.v - b.v);
-            
             const counts = {}; cards.forEach(c => counts[c.v] = (counts[c.v] || 0) + 1);
             const suitsCount = {}; cards.forEach(c => suitsCount[c.s] = (suitsCount[c.s] || 0) + 1);
-            
             const flushSuit = Object.keys(suitsCount).find(s => suitsCount[s] >= 5);
             const isFlush = !!flushSuit;
-
             const uniqueVals = [...new Set(cards.map(c => c.v))];
             if (uniqueVals.includes(14)) uniqueVals.unshift(1);
             let straightHigh = -1;
@@ -113,7 +106,6 @@
                 if (uniqueVals[i+4] - uniqueVals[i] === 4) straightHigh = uniqueVals[i+4];
             }
             const isStraight = straightHigh !== -1;
-
             const pairs = Object.keys(counts).filter(k => counts[k] === 2).map(Number).sort((a,b)=>b-a);
             const trips = Object.keys(counts).filter(k => counts[k] === 3).map(Number).sort((a,b)=>b-a);
             const quads = Object.keys(counts).filter(k => counts[k] === 4).map(Number).sort((a,b)=>b-a);
@@ -131,27 +123,60 @@
             return {s: high, n: "ハイカード"};
         }
 
+        // --- ここがAIの「思考」部分 ---
+        function aiDecision() {
+            const visibleCount = state.phase === 'preflop' ? 0 : state.phase === 'flop' ? 3 : state.phase === 'turn' ? 4 : 5;
+            const currentBoard = state.board.slice(0, visibleCount);
+            const res = evaluateHand(state.aiHand, currentBoard);
+
+            // プリフロップの判断
+            if (state.phase === 'preflop') {
+                const v1 = valMap[state.aiHand[0].v];
+                const v2 = valMap[state.aiHand[1].v];
+                // 合計値が12以下でペアでもない、かつ同じマークでもないならフォールド
+                if (v1 + v2 < 12 && v1 !== v2 && state.aiHand[0].s !== state.aiHand[1].s) {
+                    return 'fold';
+                }
+                return 'call';
+            }
+
+            // それ以降の判断
+            if (res.s < 1000) { // ハイカードの時
+                // 相手がRaiseしてきたら、自分の手札が弱ければ降りる(簡易的に30%の確率で耐える)
+                return Math.random() > 0.3 ? 'fold' : 'call';
+            }
+            return 'call';
+        }
+
+        function handleAction(action) {
+            if (action === 'fold') { endRound('AI'); return; }
+            log(`You ${action}.`);
+            
+            setTimeout(() => {
+                const aiAction = aiDecision();
+                
+                if (aiAction === 'fold') {
+                    log("AI: 「これは勝てない...」 AIがフォールドしました。");
+                    endRound('Player');
+                    return;
+                }
+
+                log("AI: コールします。");
+                if (state.phase === 'preflop') state.phase = 'flop';
+                else if (state.phase === 'flop') state.phase = 'turn';
+                else if (state.phase === 'turn') state.phase = 'river';
+                else { state.phase = 'showdown'; determineWinner(); return; }
+                updateUI();
+            }, 600);
+        }
+
         function determineWinner() {
-            // ショーダウン時は5枚全部使って判定
             const p = evaluateHand(state.playerHand, state.board);
             const a = evaluateHand(state.aiHand, state.board);
             log(`YOU: ${p.n} vs AI: ${a.n}`);
             if (p.s > a.s) endRound('Player');
             else if (a.s > p.s) endRound('AI');
             else endRound('Draw');
-        }
-
-        function handleAction(action) {
-            if (action === 'fold') { endRound('AI'); return; }
-            log(`You ${action}.`);
-            setTimeout(() => {
-                if (state.phase === 'preflop') state.phase = 'flop';
-                else if (state.phase === 'flop') state.phase = 'turn';
-                else if (state.phase === 'turn') state.phase = 'river';
-                else { state.phase = 'showdown'; determineWinner(); return; }
-                log(`AI calls. Board updated.`);
-                updateUI();
-            }, 500);
         }
 
         function endRound(winner) {
@@ -169,28 +194,18 @@
             document.getElementById('ai-stack').innerText = state.aiStack;
             document.getElementById('pot-amount').innerText = state.pot;
             
-            // --- ボードの表示 (ここが修正ポイント) ---
             const boardDiv = document.getElementById('board');
-            let visibleCount = 0;
-            if (state.phase === 'flop') visibleCount = 3;
-            if (state.phase === 'turn') visibleCount = 4;
-            if (state.phase === 'river' || state.phase === 'showdown') visibleCount = 5;
+            let visibleCount = state.phase === 'flop' ? 3 : state.phase === 'turn' ? 4 : (state.phase === 'river' || state.phase === 'showdown') ? 5 : 0;
             
             let boardHTML = "";
             for (let i = 0; i < 5; i++) {
-                if (i < visibleCount) {
-                    boardHTML += renderCard(state.board[i]);
-                } else {
-                    boardHTML += `<div class="w-20 h-28 bg-black bg-opacity-20 rounded-xl border-2 border-green-800 flex items-center justify-center text-green-900 text-3xl font-bold">?</div>`;
-                }
+                if (i < visibleCount) boardHTML += renderCard(state.board[i]);
+                else boardHTML += `<div class="w-20 h-28 bg-black bg-opacity-20 rounded-xl border-2 border-green-800 flex items-center justify-center text-green-900 text-3xl font-bold shadow-inner">?</div>`;
             }
             boardDiv.innerHTML = boardHTML;
 
-            // プレイヤーの役表示 (今見えているボードだけで判定)
-            const currentVisibleBoard = state.board.slice(0, visibleCount);
-            const currentHand = evaluateHand(state.playerHand, currentVisibleBoard);
+            const currentHand = evaluateHand(state.playerHand, state.board.slice(0, visibleCount));
             document.getElementById('current-hand-name').innerText = currentHand.n;
-
             document.getElementById('player-hand').innerHTML = state.playerHand.map(c => renderCard(c)).join('');
             
             const aiHandDiv = document.getElementById('ai-hand');
