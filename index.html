@@ -2,95 +2,102 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>梅ちゃんの本格ポーカーAI - 熟練ギャンブラー版 v2.7</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>本格ポーカーAI - Mobile Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .card { border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: all 0.2s ease; }
-        .bg-poker { background: radial-gradient(circle at center, #2d5a27 0%, #1a3a16 100%); }
-        #log::-webkit-scrollbar { width: 4px; }
-        #log::-webkit-scrollbar-thumb { background: #397d34; border-radius: 10px; }
-        .btn-push { transition: all 0.1s; border-bottom: 4px solid rgba(0,0,0,0.3); }
-        .btn-push:active:not(:disabled) { transform: translateY(2px); border-bottom-width: 1px; }
-        .btn-push:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
-        #result-banner { animation: slideDown 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28); background: rgba(0, 0, 0, 0.9); border-bottom: 2px solid #3b82f6; }
-        @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .bubble {
-            position: relative; background: #ffffff; color: #1a1a1a;
-            border-radius: 12px; padding: 6px 12px; font-weight: bold;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3); animation: pop 0.3s ease-out;
+        body { touch-action: manipulation; overflow: hidden; background: #0f172a; }
+        .card { border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.5); font-family: sans-serif; }
+        .bg-poker { background: radial-gradient(circle at center, #2d5a27 0%, #162e14 100%); }
+        .btn-action { transition: transform 0.1s; -webkit-tap-highlight-color: transparent; }
+        .btn-action:active:not(:disabled) { transform: scale(0.95); opacity: 0.8; }
+        
+        /* スマホ用リザルトバナー */
+        #result-banner {
+            animation: slideDown 0.3s ease-out;
+            background: rgba(15, 23, 42, 0.95);
+            border-bottom: 3px solid #3b82f6;
         }
-        .bubble::after { content: ''; position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); border-width: 8px 8px 0; border-style: solid; border-color: #ffffff transparent transparent; }
-        @keyframes pop { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+        @keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+
+        /* 吹き出しのモバイル調整 */
+        .bubble {
+            position: relative; background: white; color: black;
+            border-radius: 10px; padding: 4px 10px; font-weight: bold; font-size: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .bubble::after {
+            content: ''; position: absolute; bottom: -6px; left: 50%;
+            transform: translateX(-50%); border-width: 6px 6px 0;
+            border-style: solid; border-color: white transparent transparent;
+        }
     </style>
 </head>
-<body class="bg-gray-900 font-sans text-white p-1 antialiased overflow-hidden">
+<body class="text-white font-sans select-none">
 
-    <div id="result-banner" class="hidden fixed top-0 left-0 w-full z-50 py-3 flex items-center justify-center gap-6 shadow-2xl">
-        <span id="result-text" class="text-3xl font-black italic">---</span>
-        <span id="result-detail" class="text-xl text-yellow-500 font-bold border-l border-gray-600 pl-6">---</span>
+    <div id="result-banner" class="hidden fixed top-0 left-0 w-full z-50 py-4 flex flex-col items-center justify-center shadow-2xl">
+        <span id="result-text" class="text-2xl font-black italic tracking-tighter">---</span>
+        <span id="result-detail" class="text-sm text-yellow-500 font-bold">---</span>
     </div>
 
-    <div class="max-w-6xl mx-auto h-screen flex flex-col p-1">
-        <div class="mb-1 p-2 rounded-lg bg-blue-900/20 flex items-center justify-between px-4 border border-blue-500/30">
-            <h3 class="text-blue-400 font-black text-[10px] tracking-widest uppercase">AI性格: 熟練ギャンブラー v2.7</h3>
-            <div class="flex gap-4 text-[10px] text-gray-400 font-bold">
-                <span class="text-blue-400">● 状況判断の適正化</span>
-                <span class="text-green-400">● 役なし時の撤退率UP</span>
+    <div class="flex flex-col h-[100dvh] w-full max-w-md mx-auto overflow-hidden border-x border-white/5">
+        
+        <div class="p-2 bg-slate-900 flex justify-between items-center border-b border-white/10 shrink-0">
+            <span class="text-[10px] font-black text-blue-400 tracking-widest uppercase">AI Expert v2.8</span>
+            <div class="flex gap-2 text-[9px] text-gray-500 italic">
+                <span>MOBILE OPTIMIZED</span>
             </div>
         </div>
 
-        <div class="flex flex-col lg:flex-row gap-2 flex-1 overflow-hidden">
-            <div id="game-container" class="flex-[3] p-3 bg-poker rounded-[2rem] shadow-2xl border-2 border-yellow-800/20 flex flex-col justify-between overflow-hidden relative">
+        <div id="game-container" class="relative flex-1 bg-poker flex flex-col justify-between p-2 overflow-hidden">
+            
+            <div class="flex flex-col items-center mt-2">
+                <div id="ai-bubble" class="bubble hidden mb-2">...</div>
+                <div class="flex flex-col items-center bg-black/20 rounded-xl p-2 w-full border border-white/5">
+                    <div class="flex justify-between w-full px-2 mb-1">
+                        <span class="text-[10px] font-bold text-blue-300">AI PLAYER</span>
+                        <span class="text-[10px] font-mono text-gray-400">CHIPS: <b id="ai-stack" class="text-white text-xs">1000</b></span>
+                    </div>
+                    <div id="ai-hand" class="flex gap-2 h-20"></div>
+                </div>
+            </div>
+
+            <div class="flex flex-col items-center">
+                <div id="board" class="flex justify-center gap-1.5 h-20 w-full px-1"></div>
+                <div class="flex gap-2 mt-3 w-full justify-center text-center">
+                    <div class="bg-black/40 px-4 py-1 rounded-lg border border-yellow-600/30 flex-1 max-w-[100px]">
+                        <p class="text-[8px] text-yellow-600 font-bold uppercase">Pot</p>
+                        <p class="text-lg font-black text-yellow-500" id="pot-amount">0</p>
+                    </div>
+                    <div class="bg-black/40 px-4 py-1 rounded-lg border border-blue-600/30 flex-1 max-w-[100px]">
+                        <p class="text-[8px] text-blue-600 font-bold uppercase">Call</p>
+                        <p class="text-lg font-black text-blue-400" id="call-amount">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col items-center mb-2">
+                <div class="flex justify-between w-full px-2 mb-1">
+                    <span class="text-[10px] font-bold text-green-400">YOUR HAND</span>
+                    <span id="current-hand-name" class="text-[10px] font-black text-yellow-500 uppercase">---</span>
+                    <span class="text-[10px] font-mono text-gray-400">CHIPS: <b id="player-stack" class="text-white text-xs">1000</b></span>
+                </div>
+                <div id="player-hand" class="flex gap-2 h-20 mb-4"></div>
                 
-                <div class="flex flex-col items-center">
-                    <div id="ai-bubble-container" class="h-10 mb-1 flex items-end">
-                        <div id="ai-bubble" class="bubble hidden text-[11px] text-center">...</div>
-                    </div>
-                    <div class="w-full max-w-md p-2 border border-blue-500/20 rounded-2xl bg-black/20 flex flex-col items-center">
-                        <div class="flex items-center gap-4 mb-1 text-xs">
-                            <span class="text-blue-400 font-bold uppercase">AI Expert</span>
-                            <span class="text-gray-400 font-mono">CHIPS: <b id="ai-stack" class="text-white">1000</b></span>
-                        </div>
-                        <div id="ai-hand" class="flex justify-center gap-3 h-28"></div>
-                    </div>
+                <div id="controls" class="grid grid-cols-3 gap-2 w-full px-1">
+                    <button id="btn-fold" onclick="handleAction('fold')" class="btn-action bg-slate-800 py-4 rounded-xl font-black text-sm uppercase">Fold</button>
+                    <button id="btn-call" onclick="handleAction('call')" class="btn-action bg-yellow-600 py-4 rounded-xl font-black text-sm text-gray-900 uppercase">Call</button>
+                    <button id="btn-raise" onclick="handleAction('raise')" class="btn-action bg-blue-700 py-4 rounded-xl font-black text-sm uppercase">Raise</button>
                 </div>
 
-                <div class="flex flex-col items-center">
-                    <div id="board" class="flex justify-center gap-3 h-28"></div>
-                    <div class="mt-2 flex gap-4">
-                        <div class="bg-black/40 px-6 py-1 rounded-lg border border-yellow-700/50 text-center min-w-[120px]">
-                            <p class="text-[9px] text-yellow-600 font-bold uppercase">Pot</p>
-                            <span class="text-yellow-500 font-black text-xl" id="pot-amount">0</span>
-                        </div>
-                        <div class="bg-black/40 px-6 py-1 rounded-lg border border-blue-700/50 text-center min-w-[120px]">
-                            <p class="text-[9px] text-blue-600 font-bold uppercase">Call</p>
-                            <span class="text-blue-400 font-black text-xl" id="call-amount">0</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="p-3 bg-green-950/30 rounded-[2.5rem] border border-white/5 flex flex-col items-center shadow-inner">
-                    <div class="flex items-center gap-6 mb-2 text-xs">
-                        <span class="text-blue-300 font-bold uppercase tracking-wider">Player</span>
-                        <span class="text-gray-400 font-mono">CHIPS: <b id="player-stack" class="text-white">1000</b></span>
-                        <span id="current-hand-name" class="text-yellow-500 font-black italic tracking-widest uppercase">---</span>
-                    </div>
-                    <div id="player-hand" class="flex justify-center gap-3 mb-4 h-28"></div>
-                    <div id="controls" class="flex gap-4">
-                        <button id="btn-fold" onclick="handleAction('fold')" class="btn-push bg-gray-800 hover:bg-gray-700 px-10 py-3 rounded-xl font-black text-lg">フォールド</button>
-                        <button id="btn-call" onclick="handleAction('call')" class="btn-push bg-yellow-600 hover:bg-yellow-500 px-10 py-3 rounded-xl font-black text-lg text-gray-950">コール</button>
-                        <button id="btn-raise" onclick="handleAction('raise')" class="btn-push bg-blue-700 hover:bg-blue-600 px-10 py-3 rounded-xl font-black text-lg text-white">レイズ</button>
-                    </div>
-                    <div id="next-round-btn" class="hidden">
-                        <button onclick="startNewGame()" class="bg-white text-gray-900 px-16 py-4 rounded-full font-black text-xl hover:bg-blue-500 hover:text-white transition-all shadow-xl uppercase">Next Round</button>
-                    </div>
+                <div id="next-round-btn" class="hidden w-full px-1">
+                    <button onclick="startNewGame()" class="w-full bg-white text-blue-900 py-4 rounded-xl font-black text-lg shadow-xl uppercase">Next Round</button>
                 </div>
             </div>
+        </div>
 
-            <div id="log" class="w-full lg:w-64 p-3 bg-black/80 text-[11px] rounded-2xl text-blue-400 font-mono border border-blue-900/20 overflow-y-auto leading-tight">
-                [System] Expert Mode Active.
-            </div>
+        <div id="log" class="h-20 bg-slate-900 text-[9px] p-2 font-mono text-blue-400 overflow-y-auto border-t border-white/10 shrink-0">
+            [System] Mobile UI Ready.
         </div>
     </div>
 
@@ -100,9 +107,11 @@
 
         function setButtonsEnabled(enabled) {
             state.isWaiting = !enabled;
-            document.getElementById('btn-fold').disabled = !enabled;
-            document.getElementById('btn-call').disabled = !enabled;
-            document.getElementById('btn-raise').disabled = !enabled || state.raiseCount > 0;
+            ['btn-fold', 'btn-call', 'btn-raise'].forEach(id => {
+                const btn = document.getElementById(id);
+                btn.disabled = !enabled || (id === 'btn-raise' && state.raiseCount > 0);
+                btn.style.opacity = btn.disabled ? "0.3" : "1";
+            });
         }
 
         function startNewGame() {
@@ -119,119 +128,81 @@
             document.getElementById('next-round-btn').classList.add('hidden');
             document.getElementById('controls').classList.remove('hidden');
             document.getElementById('result-banner').classList.add('hidden');
-            setButtonsEnabled(true); hideBubble(); updateUI();
-            log("--- ROUND START ---");
+            setButtonsEnabled(true);
+            document.getElementById('ai-bubble').classList.add('hidden');
+            updateUI();
+            log("--- NEW ROUND ---");
         }
-
-        function showBubble(text) {
-            const b = document.getElementById('ai-bubble');
-            b.innerText = text; b.classList.remove('hidden');
-        }
-
-        function hideBubble() { document.getElementById('ai-bubble').classList.add('hidden'); }
 
         function evaluateHand(hand, boardCards) {
             const cards = [...hand, ...boardCards].map(c => ({v: valMap[c.v], s: c.s}));
             cards.sort((a,b) => a.v - b.v);
             const counts = {}; cards.forEach(c => counts[c.v] = (counts[c.v] || 0) + 1);
             const suitsCount = {}; cards.forEach(c => suitsCount[c.s] = (suitsCount[c.s] || 0) + 1);
-            const flushSuit = Object.keys(suitsCount).find(s => suitsCount[s] >= 5);
-            const isFlush = !!flushSuit;
+            const isFlush = Object.values(suitsCount).some(v => v >= 5);
             const uniqueVals = [...new Set(cards.map(c => c.v))];
             if (uniqueVals.includes(14)) uniqueVals.unshift(1);
             let straightHigh = -1;
             for (let i = 0; i <= uniqueVals.length - 5; i++) { if (uniqueVals[i+4] - uniqueVals[i] === 4) straightHigh = uniqueVals[i+4]; }
-            if (isFlush && straightHigh === 14) return {s: 9000, n: "ロイヤル"};
-            if (isFlush && straightHigh !== -1) return {s: 8000 + straightHigh, n: "ストフラ"};
-            const quads = Object.keys(counts).filter(k => counts[k] === 4).map(Number);
-            if (quads.length > 0) return {s: 7000 + quads[0], n: "4カード"};
-            const trips = Object.keys(counts).filter(k => counts[k] === 3).map(Number).sort((a,b)=>b-a);
-            const pairs = Object.keys(counts).filter(k => counts[k] === 2).map(Number).sort((a,b)=>b-a);
-            if (trips.length > 0 && pairs.length > 0) return {s: 6000 + trips[0], n: "フルハウス"};
-            if (isFlush) return {s: 5000, n: "フラッシュ"};
-            if (straightHigh !== -1) return {s: 4000 + straightHigh, n: "ストレート"};
-            if (trips.length > 0) return {s: 3000 + trips[0], n: "3カード"};
-            if (pairs.length >= 2) return {s: 2000 + pairs[0]*10 + pairs[1], n: "2ペア"};
-            if (pairs.length === 1) return {s: 1000 + pairs[0], n: "1ペア"};
-            return {s: cards.length > 0 ? Math.max(...cards.map(c=>c.v)) : 0, n: "ハイカード"};
-        }
-
-        function aiDecision() {
-            const vis = state.phase === 'preflop' ? 0 : (state.phase === 'flop' ? 3 : (state.phase === 'turn' ? 4 : 5));
-            const hand = evaluateHand(state.aiHand, state.board.slice(0, vis));
-            const v1 = valMap[state.aiHand[0].v], v2 = valMap[state.aiHand[1].v];
-            const diff = Math.abs(v1 - v2);
             
-            // プリフロップの判断
-            if (state.phase === 'preflop') {
-                if (v1 === v2 || diff <= 2 || v1 >= 10 || v2 >= 10) return 'call';
-                if (Math.random() < 0.4) return 'call'; // ブラフ
-                showBubble("この手札じゃ戦えないね。"); return 'fold';
-            }
+            const pairs = Object.keys(counts).filter(k => counts[k] === 2).length;
+            const trips = Object.keys(counts).filter(k => counts[k] === 3).length;
+            const quads = Object.keys(counts).filter(k => counts[k] === 4).length;
 
-            // 役がある場合
-            if (hand.s >= 1000) {
-                if (state.raiseCount > 0 && hand.s < 1014) { // 弱い1ペアでレイズされたら
-                    if (Math.random() < 0.4) { showBubble("そのレイズは強すぎる…"); return 'fold'; }
-                }
-                showBubble(hand.s >= 2000 ? "いい役だ、勝負しよう。" : "ペアがあるし、行くよ。");
-                return 'call';
-            }
-
-            // 役がない（ハイカード）場合
-            let foldChance = state.phase === 'flop' ? 0.3 : (state.phase === 'turn' ? 0.6 : 0.85);
-            if (state.raiseCount > 0) foldChance += 0.2; // レイズされたら降りる確率UP
-
-            if (Math.random() < foldChance) {
-                showBubble(state.raiseCount > 0 ? "そんなに積むなら降りるよ。" : "何も揃わなかった、降りるね。");
-                return 'fold';
-            }
-
-            showBubble("ブラフかもしれない。コールだ。");
-            return 'call';
+            if (isFlush && straightHigh === 14) return {s: 9, n: "Royal Flush"};
+            if (isFlush && straightHigh !== -1) return {s: 8, n: "Straight Flush"};
+            if (quads) return {s: 7, n: "Four of a Kind"};
+            if (trips && pairs) return {s: 6, n: "Full House"};
+            if (isFlush) return {s: 5, n: "Flush"};
+            if (straightHigh !== -1) return {s: 4, n: "Straight"};
+            if (trips) return {s: 3, n: "Three of a Kind"};
+            if (pairs >= 2) return {s: 2, n: "Two Pair"};
+            if (pairs === 1) return {s: 1, n: "One Pair"};
+            return {s: 0, n: "High Card"};
         }
 
         function handleAction(action) {
-            if (state.isWaiting) return; setButtonsEnabled(false);
+            if (state.isWaiting) return;
+            setButtonsEnabled(false);
             if (action === 'fold') { endRound('AI'); return; }
             let pay = state.currentBet;
             if (action === 'raise') { pay += 50; state.currentBet += 50; state.raiseCount++; }
-            state.playerStack -= pay; state.pot += pay; updateUI();
+            state.playerStack -= pay; state.pot += pay;
+            updateUI();
             
             setTimeout(() => {
-                const dec = aiDecision();
-                if (dec === 'fold') { log("AI Folded."); endRound('Player'); return; }
+                // AI Decision (Balanced Expert)
+                const vis = state.phase === 'preflop' ? 0 : (state.phase === 'flop' ? 3 : (state.phase === 'turn' ? 4 : 5));
+                const hand = evaluateHand(state.aiHand, state.board.slice(0, vis));
+                let decision = 'call';
+                if (state.phase !== 'preflop' && hand.s === 0 && Math.random() < 0.6) decision = 'fold';
+                
+                if (decision === 'fold') { log("AI Folded."); endRound('Player'); return; }
                 state.aiStack -= state.currentBet; state.pot += state.currentBet;
                 setTimeout(() => {
-                    nextPhase(); updateUI();
-                    if (state.phase !== 'showdown') setButtonsEnabled(true);
-                }, 800);
+                    if (state.phase === 'preflop') state.phase = 'flop';
+                    else if (state.phase === 'flop') state.phase = 'turn';
+                    else if (state.phase === 'turn') state.phase = 'river';
+                    else { state.phase = 'showdown'; determineWinner(); return; }
+                    state.raiseCount = 0; state.currentBet = 20;
+                    updateUI(); setButtonsEnabled(true);
+                }, 600);
             }, 500);
-        }
-
-        function nextPhase() {
-            state.raiseCount = 0; state.currentBet = 20;
-            if (state.phase === 'preflop') state.phase = 'flop';
-            else if (state.phase === 'flop') state.phase = 'turn';
-            else if (state.phase === 'turn') state.phase = 'river';
-            else { state.phase = 'showdown'; determineWinner(); }
         }
 
         function determineWinner() {
             const p = evaluateHand(state.playerHand, state.board), a = evaluateHand(state.aiHand, state.board);
             const banner = document.getElementById('result-banner');
-            const rText = document.getElementById('result-text');
-            const rDetail = document.getElementById('result-detail');
-            showBubble(`僕の手は「${a.n}」だよ。`); banner.classList.remove('hidden');
+            banner.classList.remove('hidden');
             if (p.s > a.s) {
-                rText.innerText = "PLAYER WIN"; rText.className = "text-3xl font-black text-blue-400 italic";
-                rDetail.innerText = `勝ち役: ${p.n}`; endRound('Player');
+                document.getElementById('result-text').innerText = "YOU WIN!";
+                document.getElementById('result-detail').innerText = p.n; endRound('Player');
             } else if (a.s > p.s) {
-                rText.innerText = "AI WIN"; rText.className = "text-3xl font-black text-red-500 italic";
-                rDetail.innerText = `負け役: ${a.n}`; endRound('AI');
+                document.getElementById('result-text').innerText = "AI WIN";
+                document.getElementById('result-detail').innerText = a.n; endRound('AI');
             } else {
-                rText.innerText = "DRAW"; rText.className = "text-3xl font-black text-white italic";
-                rDetail.innerText = `引き分け: ${p.n}`; endRound('Draw');
+                document.getElementById('result-text').innerText = "DRAW";
+                document.getElementById('result-detail').innerText = p.n; endRound('Draw');
             }
         }
 
@@ -240,7 +211,9 @@
             if (winner === 'Player') state.playerStack += state.pot;
             else if (winner === 'AI') state.aiStack += state.pot;
             else { state.playerStack += state.pot/2; state.aiStack += state.pot/2; }
-            state.pot = 0; document.getElementById('controls').classList.add('hidden'); document.getElementById('next-round-btn').classList.remove('hidden');
+            state.pot = 0;
+            document.getElementById('controls').classList.add('hidden');
+            document.getElementById('next-round-btn').classList.remove('hidden');
         }
 
         function updateUI() {
@@ -248,21 +221,28 @@
             document.getElementById('ai-stack').innerText = state.aiStack;
             document.getElementById('pot-amount').innerText = state.pot;
             document.getElementById('call-amount').innerText = state.currentBet;
+            
             const bDiv = document.getElementById('board');
             let vis = state.phase === 'flop' ? 3 : (state.phase === 'turn' ? 4 : (state.phase === 'river' || state.phase === 'showdown' ? 5 : 0));
             bDiv.innerHTML = "";
-            for(let i=0; i<5; i++) bDiv.innerHTML += i < vis ? renderCard(state.board[i]) : `<div class="w-20 h-28 bg-black/40 rounded-lg border border-blue-900/20 flex items-center justify-center text-blue-900/20 text-3xl font-black">?</div>`;
+            for(let i=0; i<5; i++) {
+                bDiv.innerHTML += i < vis ? renderCard(state.board[i], "w-14") : `<div class="w-14 h-20 bg-black/40 rounded border border-white/10 flex items-center justify-center text-white/10 text-xl font-bold">?</div>`;
+            }
+            
+            document.getElementById('player-hand').innerHTML = state.playerHand.map(c => renderCard(c, "w-16")).join('');
+            document.getElementById('ai-hand').innerHTML = state.phase === 'showdown' ? state.aiHand.map(c => renderCard(c, "w-16")).join('') : '<div class="w-16 h-20 bg-blue-900 rounded border border-blue-400 flex items-center justify-center text-blue-200 text-2xl font-bold">?</div>'.repeat(2);
             document.getElementById('current-hand-name').innerText = evaluateHand(state.playerHand, state.board.slice(0, vis)).n;
-            document.getElementById('player-hand').innerHTML = state.playerHand.map(c => renderCard(c)).join('');
-            document.getElementById('ai-hand').innerHTML = state.phase === 'showdown' ? state.aiHand.map(c => renderCard(c)).join('') : '<div class="w-20 h-28 bg-blue-900 rounded-lg border-2 border-blue-500 flex items-center justify-center text-blue-200 text-3xl font-black shadow-lg">?</div>'.repeat(2);
         }
 
-        function renderCard(c) {
+        function renderCard(c, width) {
             const col = (c.s === '♥' || c.s === '♦') ? 'text-red-600' : 'text-gray-900';
-            return `<div class="w-20 h-28 bg-white rounded-lg flex flex-col items-center justify-center border border-gray-300 ${col} font-black text-2xl card"><div class="leading-none text-xl">${c.v}</div><div class="text-3xl mt-1">${c.s}</div></div>`;
+            return `<div class="${width} h-20 bg-white rounded flex flex-col items-center justify-center ${col} font-bold text-lg card"><div>${c.v}</div><div class="text-xl">${c.s}</div></div>`;
         }
 
-        function log(m) { const l = document.getElementById('log'); l.innerHTML = `<span class="opacity-30">></span> ${m}<br>` + l.innerHTML; }
+        function log(m) {
+            const l = document.getElementById('log');
+            l.innerHTML = `> ${m}<br>` + l.innerHTML;
+        }
 
         startNewGame();
     </script>
